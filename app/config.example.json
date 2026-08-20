@@ -1,0 +1,17 @@
+{
+  "说明": "复制本文件为 config.json 并填入真实密钥。config.json 已被 .gitignore 排除，严禁提交到仓库。",
+  "providers": [
+    {
+      "name": "示例供应商A",
+      "base_url": "https://api.openai.com/v1",
+      "api_key": "在这里填你的Key",
+      "model": "gpt-4o-mini"
+    },
+    {
+      "name": "示例供应商B（作为备用）",
+      "base_url": "https://api.example.com/v1",
+      "api_key": "在这里填你的Key",
+      "model": "some-model"
+    }
+  ]
+}

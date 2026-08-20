@@ -1,0 +1,14 @@
+# 演示数据说明
+
+本项目真实演示案例（60 张大疆 Lito X1 航拍照片及其 ODM 成果）体积约 356 MB，**不入库**（GitHub 单文件上限 100 MB，且大文件会让仓库臃肿）。
+
+需要演示时，请使用本地已有成果：
+
+- 成果目录：`C:\Users\Administrator\Desktop\ODM_Results\project_20260810_155221`
+- 网页版演示：直接运行 `scripts\启动鹭见SiteSight.bat`，上传你自己的照片即可
+- 网页版“打开已有成果”：粘贴上面的成果路径，可跳过建模直接生成 AI 场地分析报告（适合演示）
+
+如希望把演示成果放进仓库，建议：
+
+1. 将正射影像缩略图（< 2 MB PNG）放入 `data/demo/` 用于 README 展示
+2. 将完整成果上传到 GitHub Release 或网盘，在 README 中附链接

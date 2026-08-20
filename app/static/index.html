@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>鹭见 SiteSight - 航拍照片一键三维建模与 AI 场地分析</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    background: #f2f5f9;
+    color: #1f2d3d;
+    padding: 24px 16px 60px;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 24px; }
+  header h1 { font-size: 30px; color: #0b5cad; margin-bottom: 6px; letter-spacing: 1px; }
+  header h1 span { color: #2f9ee0; }
+  header p { color: #5c6b7a; font-size: 14px; }
+  .card {
+    background: #fff; border-radius: 12px; padding: 22px 24px;
+    box-shadow: 0 2px 10px rgba(20, 60, 110, 0.07);
+    margin-bottom: 18px;
+  }
+  .card h2 { font-size: 17px; margin-bottom: 12px; color: #17324f; }
+  .step { display: inline-block; background: #0b5cad; color: #fff; border-radius: 50%;
+    width: 22px; height: 22px; line-height: 22px; text-align: center; font-size: 13px; margin-right: 8px; }
+  .path-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  input[type=text], textarea, select {
+    font-family: inherit;
+    border: 1px solid #c9d6e3; border-radius: 8px; padding: 10px 12px; font-size: 14px;
+  }
+  input[type=text] { flex: 1; }
+  textarea { width: 100%; min-height: 70px; resize: vertical; margin-bottom: 10px; }
+  .btn { border: none; border-radius: 8px; padding: 10px 18px; font-size: 14px; cursor: pointer; }
+  .btn-blue { background: #0b5cad; color: #fff; }
+  .btn-blue:hover { background: #094e99; }
+  .btn-blue:disabled { background: #a8c4e0; cursor: not-allowed; }
+  .btn-gray { background: #eef2f6; color: #33475b; }
+  .btn-gray:hover { background: #e2e9f0; }
+  .btn-green { background: #1f9d55; color: #fff; }
+  .btn-green:hover { background: #1a8549; }
+  .btn-green:disabled { background: #9fd0b2; cursor: not-allowed; }
+  .dropzone {
+    border: 2px dashed #a9c2da; border-radius: 10px; padding: 26px;
+    text-align: center; color: #5c6b7a; cursor: pointer; transition: all .2s;
+  }
+  .dropzone.over { border-color: #0b5cad; background: #eef6ff; }
+  .dropzone b { color: #0b5cad; }
+  .hint { font-size: 12px; color: #8a99a8; margin-top: 6px; }
+  label.check { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 6px 0; cursor: pointer; }
+  .progress-box { display: none; }
+  .stage-line { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .stage-line .st { font-size: 15px; color: #0b5cad; font-weight: 600; }
+  .stage-line .tm { font-size: 13px; color: #5c6b7a; }
+  .bar { height: 14px; background: #e6edf4; border-radius: 8px; overflow: hidden; }
+  .bar > div { height: 100%; width: 0%; background: linear-gradient(90deg, #0b5cad, #2f9ee0); transition: width .6s; }
+  .logbox { margin-top: 12px; background: #0f2438; color: #b9d5ef; border-radius: 8px;
+    padding: 10px 12px; font-family: Consolas, monospace; font-size: 12px; height: 180px; overflow-y: auto;
+    white-space: pre-wrap; word-break: break-all; }
+  .result-box { display: none; }
+  .files { width: 100%; border-collapse: collapse; margin: 10px 0; }
+  .files th, .files td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eef2f6; font-size: 14px; }
+  .files th { color: #5c6b7a; font-weight: normal; font-size: 13px; }
+  .dl { color: #0b5cad; text-decoration: none; font-weight: 600; }
+  .dl:hover { text-decoration: underline; }
+  .preview img { width: 100%; border-radius: 8px; border: 1px solid #e2e9f0; margin-top: 10px; }
+  .msg { font-size: 13px; color: #c0392b; margin-top: 8px; }
+  .msg.green { color: #1f9d55; }
+  .chip { display: inline-block; background: #eef6ff; color: #0b5cad; border: 1px solid #cfe3f7;
+    border-radius: 20px; padding: 4px 12px; font-size: 12px; margin: 4px 6px 4px 0; }
+  .mem-row { display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    background: #f8fafc; border: 1px solid #e2e9f0; border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; font-size: 13px; }
+  .mem-row .del { color: #c0392b; cursor: pointer; border: none; background: none; font-size: 13px; }
+  footer { text-align: center; color: #8a99a8; font-size: 12px; margin-top: 24px; line-height: 1.8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>鹭见 <span>SiteSight</span></h1>
+    <p>航拍照片 → 三维模型 / 正射影像 / DSM / 点云 / AI 场地分析报告（本地处理，数据不上云）</p>
+  </header>
+
+  <div class="card">
+    <h2><span class="step">1</span>选择照片（二选一）</h2>
+    <div class="path-row">
+      <input type="text" id="pathInput" placeholder="方式一：直接粘贴照片文件夹路径，例如 C:\Users\Administrator\Desktop\DJI_002_20260809">
+      <button class="btn btn-blue" id="btnUsePath">使用此路径</button>
+    </div>
+    <div class="dropzone" id="dropzone">
+      <p><b>方式二：把照片拖到这里</b>（支持拖入整个文件夹）</p>
+      <p class="hint">或点击此处选择文件 / 文件夹</p>
+      <input type="file" id="fileInput" multiple webkitdirectory style="display:none">
+    </div>
+    <div class="hint" id="uploadInfo"></div>
+    <div class="msg" id="pathMsg"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="step">0</span>打开已有成果（跳过建模，直接出报告）</h2>
+    <div class="path-row">
+      <input type="text" id="projInput" placeholder="粘贴 ODM 成果文件夹路径，例如 C:\Users\Administrator\Desktop\ODM_Results\project_20260810_155221">
+      <button class="btn btn-blue" id="btnLoadProject">加载成果</button>
+    </div>
+    <div class="msg" id="projMsg"></div>
+    <div class="hint">适合演示：加载 8 月 10 日已生成的完整成果，秒出 AI 场地分析报告。</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="step">2</span>处理选项</h2>
+    <label class="check"><input type="checkbox" id="optDsm" checked> 生成数字表面模型 DSM（测绘用，推荐）</label>
+    <label class="check"><input type="checkbox" id="optFast"> 快速模式（低精度粗模，适合演示/快速出图）</label>
+    <div class="hint">三维模型、正射影像、点云、处理报告始终都会生成。</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="step">3</span>开始处理</h2>
+    <button class="btn btn-green" id="btnStart" disabled>开始处理</button>
+    <span class="hint" id="startHint" style="margin-left:10px">请先选择照片</span>
+    <div class="msg" id="startMsg"></div>
+
+    <div class="progress-box" id="progressBox">
+      <div class="stage-line">
+        <span class="st" id="stageName">正在启动</span>
+        <span class="tm" id="elapsed">00:00</span>
+      </div>
+      <div class="bar"><div id="barFill"></div></div>
+      <div class="logbox" id="logBox"></div>
+    </div>
+  </div>
+
+  <div class="card result-box" id="resultBox">
+    <h2><span class="step">4</span>成果下载</h2>
+    <div class="msg green" id="resultMsg"></div>
+    <table class="files" id="filesTable">
+      <tr><th>成果</th><th>大小</th><th></th></tr>
+    </table>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+      <button class="btn btn-blue" id="btnZip">打包下载全部</button>
+      <button class="btn btn-gray" id="btnFolder">打开成果文件夹</button>
+      <span style="font-size:13px; color:#5c6b7a;">导出：</span>
+      <select id="exportFormat" style="padding:8px 10px;">
+        <option value="stl">STL（3D打印/模型）</option>
+        <option value="ply">PLY（点云/网格）</option>
+        <option value="laz">LAZ（压缩点云）</option>
+      </select>
+      <button class="btn btn-gray" id="btnExport">导出选中格式</button>
+    </div>
+    <div class="preview" id="previewBox"></div>
+  </div>
+
+  <div class="card" id="reportBox" style="display:none;">
+    <h2><span class="step">5</span>AI 场地分析报告</h2>
+    <div class="msg" id="reportMsg"></div>
+    <div id="reportPrefs"></div>
+    <div id="reportContent" style="background:#f8fafc; border:1px solid #e2e9f0; border-radius:8px; padding:16px; font-size:14px; line-height:1.7; max-height:500px; overflow-y:auto; white-space:pre-wrap;"></div>
+    <div style="margin-top:12px;">
+      <button class="btn btn-blue" id="btnReport">重新生成报告</button>
+    </div>
+  </div>
+
+  <div class="card" id="feedbackBox" style="display:none;">
+    <h2><span class="step">6</span>告诉我你的偏好（记忆 Agent）</h2>
+    <p class="hint" style="margin-bottom:8px;">例：“以后报告要突出坡度分析”“面积放在最前面”“不要写水系内容”“报告要更简洁”。下次生成会自动参考。</p>
+    <textarea id="feedbackInput" placeholder="输入你对报告风格的偏好…"></textarea>
+    <button class="btn btn-green" id="btnFeedback">记住这条偏好</button>
+    <div class="msg" id="feedbackMsg"></div>
+    <div style="margin-top:14px;">
+      <h2 style="font-size:15px; margin-bottom:8px;">已记住的偏好</h2>
+      <div id="memList"></div>
+    </div>
+  </div>
+
+  <footer>由你电脑上的 OpenDroneMap 本地处理 · 照片与模型不会上传到任何服务器<br>
+  鹭见 SiteSight · 大工黑客松 2026 · 奇绩创坛赛道 × 七牛云赛道</footer>
+</div>
+
+<script>
+var state = { mode: null, path: null, files: [], name: null, uploading: false };
+var dropzone = document.getElementById('dropzone');
+var fileInput = document.getElementById('fileInput');
+var uploadInfo = document.getElementById('uploadInfo');
+var pathMsg = document.getElementById('pathMsg');
+var startBtn = document.getElementById('btnStart');
+
+function fmtSize(mb) { return mb >= 1024 ? (mb/1024).toFixed(2)+' GB' : mb.toFixed(1)+' MB'; }
+
+dropzone.addEventListener('click', function(){ fileInput.click(); });
+fileInput.addEventListener('change', function(){
+  state.files = Array.from(fileInput.files);
+  setUploadFiles();
+});
+dropzone.addEventListener('dragover', function(e){ e.preventDefault(); dropzone.classList.add('over'); });
+dropzone.addEventListener('dragleave', function(){ dropzone.classList.remove('over'); });
+dropzone.addEventListener('drop', function(e){
+  e.preventDefault(); dropzone.classList.remove('over');
+  state.files = Array.from(e.dataTransfer.files);
+  setUploadFiles();
+});
+
+function setUploadFiles(){
+  if (!state.files.length) return;
+  var jpgs = state.files.filter(function(f){ return /\.jpe?g$/i.test(f.name); });
+  state.files = jpgs;
+  if (!jpgs.length){ uploadInfo.textContent = '没有找到 JPG 照片'; state.mode = null; return; }
+  uploadInfo.textContent = '已选择 ' + jpgs.length + ' 张 JPG 照片（合计 ' + fmtSize(jpgs.reduce(function(s,f){return s+f.size;},0)/1048576) + '），点击"开始处理"上传';
+  state.mode = 'upload';
+  pathMsg.textContent = '';
+  startBtn.disabled = false;
+  document.getElementById('startHint').textContent = '';
+}
+
+document.getElementById('btnUsePath').addEventListener('click', function(){
+  var v = document.getElementById('pathInput').value.trim();
+  if (!v){ pathMsg.textContent = '请先输入照片文件夹路径'; return; }
+  state.mode = 'path'; state.path = v; state.files = [];
+  pathMsg.textContent = '';
+  uploadInfo.textContent = '将使用文件夹：' + v;
+  startBtn.disabled = false;
+  document.getElementById('startHint').textContent = '';
+});
+
+document.getElementById('btnLoadProject').addEventListener('click', function(){
+  var v = document.getElementById('projInput').value.trim();
+  var msg = document.getElementById('projMsg');
+  if (!v){ msg.textContent = '请先粘贴成果文件夹路径'; return; }
+  msg.className = 'msg'; msg.textContent = '正在加载…';
+  fetch('/api/load-project', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: v })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(j){
+    if (!j.ok){ throw new Error(j.error || '加载失败'); }
+    msg.className = 'msg green';
+    msg.textContent = '成果已加载：' + j.name;
+    state.name = j.name;
+    document.getElementById('resultBox').style.display = 'block';
+    document.getElementById('feedbackBox').style.display = 'block';
+    loadFiles();
+    loadReport();
+    loadMemories();
+  })
+  .catch(function(e){ msg.className = 'msg'; msg.textContent = '加载失败：' + e.message; });
+});
+
+startBtn.addEventListener('click', function(){ startJob(); });
+
+function startJob(){
+  if (!state.mode || startBtn.disabled) return;
+  startBtn.disabled = true;
+  var msg = document.getElementById('startMsg');
+  msg.className = 'msg'; msg.textContent = '';
+  var makeDsm = document.getElementById('optDsm').checked;
+  var makeFast = document.getElementById('optFast').checked;
+  if (state.mode === 'path'){
+    postStart({ path: state.path, make_dsm: makeDsm, make_fast: makeFast });
+  } else {
+    beginUpload(makeDsm, makeFast);
+  }
+}
+
+function beginUpload(makeDsm, makeFast){
+  var msg = document.getElementById('startMsg');
+  msg.textContent = '正在创建工程…';
+  fetch('/api/new-project', { method: 'POST' })
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if (!j.ok){ throw new Error(j.error || '创建工程失败'); }
+      state.name = j.name;
+      uploadFiles(makeDsm, makeFast);
+    })
+    .catch(function(e){ msg.textContent = '创建工程失败：' + e.message; startBtn.disabled = false; });
+}
+
+function uploadFiles(makeDsm, makeFast){
+  var msg = document.getElementById('startMsg');
+  msg.textContent = '正在上传照片（0/' + state.files.length + '）…';
+  var i = 0;
+  function next(){
+    if (i >= state.files.length){
+      msg.textContent = '照片上传完成，开始处理…';
+      postStart({ name: state.name, make_dsm: makeDsm, make_fast: makeFast });
+      return;
+    }
+    var f = state.files[i++];
+    var rel = (f.webkitRelativePath || f.name).split('/').pop();
+    var xhr = new XMLHttpRequest();
+    xhr.open('PUT', '/api/upload?name=' + encodeURIComponent(state.name) + '&rel=' + encodeURIComponent(rel));
+    xhr.onload = function(){ msg.textContent = '正在上传照片（' + i + '/' + state.files.length + '）…'; next(); };
+    xhr.onerror = function(){ msg.textContent = '上传失败：' + f.name; startBtn.disabled = false; };
+    xhr.send(f);
+  }
+  next();
+}
+
+function postStart(body){
+  var msg = document.getElementById('startMsg');
+  fetch('/api/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(j){
+    if (!j.ok){ throw new Error(j.error || '启动失败'); }
+    msg.textContent = '';
+    state.name = j.name;
+    showProgress();
+    poll();
+  })
+  .catch(function(e){
+    msg.textContent = '启动失败：' + e.message;
+    startBtn.disabled = false;
+  });
+}
+
+function showProgress(){
+  document.getElementById('progressBox').style.display = 'block';
+  document.getElementById('resultBox').style.display = 'none';
+}
+
+function fmtTime(s){
+  var m = Math.floor(s/60), sec = s%60;
+  return (m<10?'0':'')+m+':'+(sec<10?'0':'')+sec;
+}
+
+function poll(){
+  fetch('/api/status').then(function(r){ return r.json(); }).then(function(s){
+    document.getElementById('stageName').textContent = s.stage || '处理中';
+    document.getElementById('barFill').style.width = (s.pct||0) + '%';
+    document.getElementById('elapsed').textContent = fmtTime(s.elapsed||0);
+    var log = document.getElementById('logBox');
+    log.textContent = (s.log||[]).join('\n');
+    log.scrollTop = log.scrollHeight;
+    if (s.finished){
+      finishJob(s);
+    } else {
+      setTimeout(poll, 2000);
+    }
+  }).catch(function(){ setTimeout(poll, 3000); });
+}
+
+function finishJob(s){
+  var msg = document.getElementById('startMsg');
+  if (s.success){
+    msg.className = 'msg green';
+    msg.textContent = '处理完成！';
+  } else {
+    msg.className = 'msg';
+    msg.textContent = '处理失败，请查看上方日志（或打开成果文件夹里的 processing.log）。';
+  }
+  loadFiles();
+  loadReport();
+  document.getElementById('feedbackBox').style.display = 'block';
+  loadMemories();
+}
+
+function loadFiles(){
+  fetch('/api/files').then(function(r){ return r.json(); }).then(function(d){
+    var tbody = document.getElementById('filesTable');
+    tbody.innerHTML = '<tr><th>成果</th><th>大小</th><th></th></tr>';
+    (d.files||[]).forEach(function(f){
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>'+f.label+'</td><td>'+fmtSize(f.size_mb)+'</td>' +
+        '<td><a class="dl" href="/download?name='+encodeURIComponent(d.name)+'&file='+encodeURIComponent(f.file)+'">下载</a></td>';
+      tbody.appendChild(tr);
+    });
+    document.getElementById('resultBox').style.display = 'block';
+    var box = document.getElementById('previewBox');
+    box.innerHTML = '';
+    if (d.success && d.name){
+      var img = document.createElement('img');
+      img.src = '/preview?name=' + encodeURIComponent(d.name) + '&t=' + Date.now();
+      img.alt = '正射影像预览';
+      box.appendChild(img);
+    }
+  });
+}
+
+function loadMemories(){
+  fetch('/api/memories').then(function(r){ return r.json(); }).then(function(d){
+    var list = document.getElementById('memList');
+    list.innerHTML = '';
+    (d.memories||[]).forEach(function(m){
+      var row = document.createElement('div');
+      row.className = 'mem-row';
+      var left = document.createElement('div');
+      left.textContent = m.text + '　（' + (m.created_at||'') + '）';
+      var del = document.createElement('button');
+      del.className = 'del';
+      del.textContent = '删除';
+      del.onclick = function(){
+        fetch('/api/memories/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: m.id })
+        }).then(loadMemories);
+      };
+      row.appendChild(left);
+      row.appendChild(del);
+      list.appendChild(row);
+    });
+  });
+}
+
+document.getElementById('btnZip').addEventListener('click', function(){
+  if (state.name) window.location.href = '/api/zip?name=' + encodeURIComponent(state.name);
+});
+document.getElementById('btnFolder').addEventListener('click', function(){
+  if (state.name) fetch('/api/open-folder?name=' + encodeURIComponent(state.name));
+});
+document.getElementById('btnExport').addEventListener('click', function(){
+  if (!state.name) return;
+  var fmt = document.getElementById('exportFormat').value;
+  window.location.href = '/api/export?name=' + encodeURIComponent(state.name) + '&format=' + encodeURIComponent(fmt);
+});
+document.getElementById('btnReport').addEventListener('click', function(){
+  loadReport(true);
+});
+
+function loadReport(force){
+  if (!state.name) return;
+  var url = '/api/analyze?name=' + encodeURIComponent(state.name) + (force ? '&force=1' : '');
+  var box = document.getElementById('reportBox');
+  var msg = document.getElementById('reportMsg');
+  var content = document.getElementById('reportContent');
+  var prefs = document.getElementById('reportPrefs');
+  msg.className = 'msg'; msg.textContent = '正在生成AI分析报告…';
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if (!j.ok){ throw new Error(j.error || '报告生成失败'); }
+      content.textContent = j.content || '';
+      prefs.innerHTML = '';
+      (j.preferences||[]).forEach(function(t){
+        var c = document.createElement('span');
+        c.className = 'chip';
+        c.textContent = '本次已参考：' + t;
+        prefs.appendChild(c);
+      });
+      box.style.display = 'block';
+      msg.textContent = '';
+    })
+    .catch(function(e){
+      msg.className = 'msg';
+      msg.textContent = '报告生成失败：' + e.message;
+      box.style.display = 'block';
+    });
+}
+
+document.getElementById('btnFeedback').addEventListener('click', function(){
+  var input = document.getElementById('feedbackInput');
+  var msg = document.getElementById('feedbackMsg');
+  var text = input.value.trim();
+  if (!text){ msg.textContent = '请先输入你的偏好'; return; }
+  msg.className = 'msg'; msg.textContent = '正在保存…';
+  fetch('/api/feedback', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: text })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(j){
+    if (!j.ok){ throw new Error(j.error || '保存失败'); }
+    msg.className = 'msg green';
+    msg.textContent = '已记住！下次生成报告会自动参考。';
+    input.value = '';
+    loadMemories();
+  })
+  .catch(function(e){ msg.className = 'msg'; msg.textContent = '保存失败：' + e.message; });
+});
+</script>
+</body>
+</html>

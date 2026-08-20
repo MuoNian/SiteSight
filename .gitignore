@@ -1,0 +1,29 @@
+# === 密钥与本地配置（严禁提交）===
+app/config.json
+.env
+*.pem
+*.key
+
+# === Python ===
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# === 日志 / 临时文件 ===
+*.log
+tmp/
+
+# === 大体积成果与原始素材（不入库，演示数据另行提供）===
+outputs/
+work/
+*.tif
+*.laz
+*.ply
+*.obj
+*.zip
+
+# === 系统文件 ===
+Thumbs.db
+Desktop.ini
+.DS_Store
