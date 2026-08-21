@@ -53,6 +53,7 @@ def load_providers():
                             "base_url": p["base_url"],
                             "api_key": p["api_key"],
                             "model": p.get("model", "gpt-4o-mini"),
+                            "max_tokens": p.get("max_tokens", 4096),
                         }
                     )
         except Exception as e:
@@ -68,7 +69,7 @@ def call_llm_api(prompt):
                 "model": p["model"],
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.7,
-                "max_tokens": 2000,
+                "max_tokens": p.get("max_tokens", 4096),
             }
         ).encode("utf-8")
         req = urllib.request.Request(
@@ -83,8 +84,14 @@ def call_llm_api(prompt):
         try:
             with urllib.request.urlopen(req, timeout=120) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
-                content = result["choices"][0]["message"]["content"]
+                choice = result["choices"][0]
+                content = choice["message"]["content"]
                 if content and content.strip():
+                    # 部分网关把 max_tokens 当作总预算，会截断长输出；
+                    # 若明显不完整则尝试下一个供应商。
+                    if choice.get("finish_reason") == "length" and len(content) < 300:
+                        print("LLM 输出被截断（%s），尝试下一个供应商" % p.get("name"))
+                        continue
                     return content
         except Exception as e:
             print("LLM API error (%s): %s" % (p.get("name"), e))
