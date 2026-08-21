@@ -94,6 +94,18 @@ def list_memories(path=None):
     return sorted(mems, key=lambda m: m.get("created_at", ""), reverse=True)
 
 
+def get_stats(path=None):
+    """记忆统计：条数、累计被引用次数、主题分布（赛道 4 记忆成本/效果可视化）。"""
+    mems = _load_memories(path)
+    total = len(mems)
+    used_total = sum(int(m.get("used_count", 0) or 0) for m in mems)
+    tags = {}
+    for m in mems:
+        for t in m.get("tags", []):
+            tags[t] = tags.get(t, 0) + 1
+    return {"total": total, "used_total": used_total, "tags": tags}
+
+
 def delete_memory(mem_id, path=None):
     """删除一条记忆。"""
     memories = _load_memories(path)

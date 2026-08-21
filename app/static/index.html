@@ -434,6 +434,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       <div class="msg" id="feedbackMsg"></div>
       <div style="margin-top:18px">
         <h3 style="font-size:.98rem;margin-bottom:10px">已记住的偏好</h3>
+        <div class="hint" id="memStats" style="margin:0 0 10px"></div>
         <div id="memList"></div>
       </div>
     </div>
@@ -721,6 +722,12 @@ function loadMemories(){
       list.appendChild(row);
     });
   });
+  fetch('/api/memories/stats').then(function(r){ return r.json(); }).then(function(d){
+    var el = $('memStats');
+    if (el && d.ok){
+      el.textContent = '已沉淀 ' + d.stats.total + ' 条偏好，累计被引用 ' + d.stats.used_total + ' 次';
+    }
+  }).catch(function(){});
 }
 
 $('btnLoadProject').addEventListener('click', function(){

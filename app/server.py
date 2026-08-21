@@ -481,6 +481,8 @@ class Handler(BaseHTTPRequestHandler):
                     }
                 )
             self._send_json({"ok": True, "memories": mems})
+        elif p == "/api/memories/stats":
+            self._send_json({"ok": True, "stats": memory_agent.get_stats()})
         elif p == "/download":
             name = q.get("name", [""])[0]
             rel = q.get("file", [""])[0]
