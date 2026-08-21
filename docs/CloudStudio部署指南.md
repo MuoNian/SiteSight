@@ -41,12 +41,24 @@
 
 ## 四、启动服务（约 1 分钟）
 
-在 Cloud Studio 内置终端里执行：
+在 Cloud Studio 内置终端里执行。**先看一眼仓库文件在哪里**：
 
 ```bash
-cd SiteSight/app
-python server.py
+ls
 ```
+
+- 如果直接看到 `app/` 文件夹（仓库被检入工作区根目录，最常见）：执行
+  ```bash
+  cd app
+  SITESIGHT_NO_BROWSER=1 python server.py
+  ```
+- 如果看到的是 `SiteSight/` 文件夹：执行
+  ```bash
+  cd SiteSight/app
+  SITESIGHT_NO_BROWSER=1 python server.py
+  ```
+
+> 提示：如果 `python` 不可用，改用 `python3`；`SITESIGHT_NO_BROWSER=1` 是关闭自动打开浏览器（云端没有桌面）。
 
 看到 `鹭见 SiteSight 已启动` 即成功。
 
