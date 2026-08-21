@@ -1,0 +1,13 @@
+# 官方演示成果
+
+本目录是「鹭见 SiteSight」的官方演示包，内容来自 2026-08-10 的真实航拍建模成果（60 张大疆 Lito X1 照片，约 10.54 公顷场地）：
+
+- `metadata.json`：场地元数据（影像数、正射尺寸、地面分辨率、高程范围）
+- `preview_ortho.png`：正射影像预览图
+- `analysis_report.md`：AI 场地分析报告（已生成缓存，秒开）
+- `odm_report/report.pdf`：ODM 处理报告（可下载）
+
+网页端「体验官方演示」按钮会自动加载本目录，无需任何配置。
+
+完整成果（OBJ 模型、正射 TIFF、DSM、点云等，约 356MB）体积过大未入库，可在本地版通过「打开已有成果」加载：
+`C:\Users\Administrator\Desktop\ODM_Results\project_20260810_155221`

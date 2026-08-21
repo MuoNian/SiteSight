@@ -10,6 +10,7 @@
 import json
 import os
 import re
+import shutil
 import subprocess
 import urllib.request
 
@@ -122,14 +123,26 @@ def read_odm_metadata(project):
         if not os.path.isfile(fp):
             continue
         try:
-            out = subprocess.run(
-                ["cmd.exe", "/c", "call win32env.bat && gdalinfo -mm " + fp],
-                cwd=ODM_DIR,
-                capture_output=True,
-                timeout=30,
-                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-            )
-            text = out.stdout.decode("utf-8", errors="replace")
+            gdal = shutil.which("gdalinfo")
+            text = ""
+            if gdal:
+                out = subprocess.run(
+                    [gdal, "-mm", fp],
+                    capture_output=True,
+                    timeout=60,
+                )
+                text = out.stdout.decode("utf-8", errors="replace")
+            elif os.name == "nt" and os.path.isfile(os.path.join(ODM_DIR, "win32env.bat")):
+                out = subprocess.run(
+                    ["cmd.exe", "/c", "call win32env.bat && gdalinfo -mm " + fp],
+                    cwd=ODM_DIR,
+                    capture_output=True,
+                    timeout=30,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                )
+                text = out.stdout.decode("utf-8", errors="replace")
+            if not text:
+                continue
             if key == "ortho":
                 m = re.search(r"Size is (\d+),\s*(\d+)", text)
                 if m:
@@ -153,6 +166,26 @@ def read_odm_metadata(project):
                 meta["elev_range"] = round(meta["elev_max"] - meta["elev_min"], 2)
         except Exception:
             pass
+    # 兜底：读取项目里的 metadata.json 侧车（云端无 GDAL 时由本地预生成）
+    if not (meta["ortho_width"] and meta["elev_range"]):
+        mj = os.path.join(project, "metadata.json")
+        if os.path.isfile(mj):
+            try:
+                with open(mj, "r", encoding="utf-8") as f:
+                    m = json.load(f)
+                for k in (
+                    "images",
+                    "ortho_width",
+                    "ortho_height",
+                    "resolution",
+                    "elev_min",
+                    "elev_max",
+                    "elev_range",
+                ):
+                    if k in m and m[k] is not None:
+                        meta[k] = m[k]
+            except Exception:
+                pass
     return meta
 
 

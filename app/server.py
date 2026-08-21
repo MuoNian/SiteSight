@@ -10,11 +10,13 @@
 import json
 import mimetypes
 import os
+import platform
 import re
 import shutil
 import subprocess
 import threading
 import time
+import urllib.request
 import webbrowser
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -82,6 +84,16 @@ OUTPUT_CANDIDATES = [
     ("odm_report/report.pdf", "处理报告 PDF"),
 ]
 
+# 官方演示成果（随仓库分发，云端可用）
+DEMO_PROJ = os.path.normpath(os.path.join(BASE_DIR, "..", "data", "demo_project"))
+
+
+def odm_available():
+    """判断本机是否可现场建模（需要 Windows + ODM 的 winrun.bat）。"""
+    if os.name != "nt":
+        return False
+    return os.path.isfile(os.path.join(ODM_DIR, "winrun.bat"))
+
 
 def resolve_project(name):
     """优先返回当前已加载/处理中的项目路径，否则在 PROJ_ROOT 下查找。"""
@@ -90,6 +102,23 @@ def resolve_project(name):
             return STATE["project"]
     cand = os.path.join(PROJ_ROOT, name)
     return cand if os.path.isdir(cand) else None
+
+
+def load_project_state(proj):
+    """把某个成果目录加载为当前项目（供分析/下载/报告使用）。"""
+    log_path = os.path.join(proj, "processing.log")
+    with STATE["lock"]:
+        STATE.update(
+            running=False,
+            finished=True,
+            success=True,
+            name=os.path.basename(proj),
+            project=proj,
+            log_path=log_path if os.path.isfile(log_path) else None,
+            start_time=None,
+        )
+    make_preview(proj)
+    return os.path.basename(proj)
 
 
 def read_log_tail(max_lines=40):
@@ -150,12 +179,15 @@ def files_dict():
         "finished": STATE["finished"],
         "success": STATE["success"],
         "name": STATE.get("name"),
+        "has_model": False,
     }
     if not STATE.get("project") or not os.path.isdir(STATE["project"]):
         return d
     for rel, label in OUTPUT_CANDIDATES:
         fp = os.path.join(STATE["project"], rel)
         if os.path.isfile(fp):
+            if rel.startswith(("odm_texturing", "odm_meshing", "odm_georeferencing")):
+                d["has_model"] = True
             d["files"].append(
                 {
                     "label": label,
@@ -250,18 +282,25 @@ def make_preview(project):
         return None
     if os.path.exists(out):
         return out
-    # 路径均为英文且不含空格，无需引号（避免 cmd 引号嵌套问题）
-    cmd = "call win32env.bat && gdal_translate -of PNG -outsize 1400 0 {} {}".format(
-        ortho, out
-    )
     try:
-        subprocess.run(
-            ["cmd.exe", "/c", cmd],
-            cwd=ODM_DIR,
-            capture_output=True,
-            timeout=180,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-        )
+        gdal_conv = shutil.which("gdal_translate")
+        if gdal_conv:
+            subprocess.run(
+                [gdal_conv, "-of", "PNG", "-outsize", "1400", "0", ortho, out],
+                capture_output=True,
+                timeout=180,
+            )
+        elif os.name == "nt" and os.path.isfile(os.path.join(ODM_DIR, "win32env.bat")):
+            cmd = "call win32env.bat && gdal_translate -of PNG -outsize 1400 0 {} {}".format(
+                ortho, out
+            )
+            subprocess.run(
+                ["cmd.exe", "/c", cmd],
+                cwd=ODM_DIR,
+                capture_output=True,
+                timeout=180,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
     except Exception:
         pass
     return out if os.path.exists(out) else None
@@ -408,6 +447,23 @@ class Handler(BaseHTTPRequestHandler):
         p = u.path
         if p in ("/", "/index.html"):
             self._serve_file(os.path.join(STATIC_DIR, "index.html"))
+        elif p.startswith("/data/"):
+            rel = p[len("/data/"):]
+            data_root = os.path.realpath(os.path.join(os.path.dirname(BASE_DIR), "data"))
+            fp = os.path.realpath(os.path.join(data_root, rel))
+            if fp.startswith(data_root + os.sep) and os.path.isfile(fp):
+                self._serve_file(fp)
+            else:
+                self.send_error(404)
+        elif p == "/api/info":
+            self._send_json(
+                {
+                    "ok": True,
+                    "platform": platform.system(),
+                    "odm_available": odm_available(),
+                    "demo_project": os.path.isdir(DEMO_PROJ),
+                }
+            )
         elif p == "/api/status":
             self._send_json(status_dict())
         elif p == "/api/files":
@@ -453,8 +509,13 @@ class Handler(BaseHTTPRequestHandler):
             name = q.get("name", [""])[0]
             project = resolve_project(name)
             if project:
-                os.startfile(project)  # type: ignore
-                self._send_json({"ok": True})
+                if os.name == "nt":
+                    os.startfile(project)  # type: ignore
+                    self._send_json({"ok": True})
+                else:
+                    self._send_json(
+                        {"ok": False, "error": "当前环境不支持打开系统文件夹，请使用下载功能。"}, 400
+                    )
             else:
                 self._send_json({"ok": False, "error": "项目不存在"}, 404)
         elif p == "/api/analyze":
@@ -514,6 +575,16 @@ class Handler(BaseHTTPRequestHandler):
                 if STATE["running"]:
                     self._send_json({"ok": False, "error": "已有任务在运行，请等待完成"}, 400)
                     return
+            if not odm_available():
+                self._send_json(
+                    {
+                        "ok": False,
+                        "error": "当前环境未配置 ODM 建模引擎（云端演示版不支持现场建模）。"
+                        "请使用『加载已有成果』或『官方演示』；完整建模请在本机运行。",
+                    },
+                    400,
+                )
+                return
             body = self._read_body()
             name = body.get("name") or "project_" + time.strftime("%Y%m%d_%H%M%S")
             photo_path = body.get("path")
@@ -542,6 +613,12 @@ class Handler(BaseHTTPRequestHandler):
                 return
             launch_job(name, make_dsm, make_fast)
             self._send_json({"ok": True, "name": name, "count": n})
+        elif u.path == "/api/demo":
+            if not os.path.isdir(DEMO_PROJ):
+                self._send_json({"ok": False, "error": "演示数据缺失（data/demo_project 不存在）"}, 404)
+                return
+            name = load_project_state(DEMO_PROJ)
+            self._send_json({"ok": True, "name": name, "demo": True})
         elif u.path == "/api/load-project":
             body = self._read_body()
             proj = (body.get("path") or "").strip()
@@ -555,19 +632,8 @@ class Handler(BaseHTTPRequestHandler):
                     {"ok": False, "error": "这不是有效的 ODM 成果目录（缺少 odm_orthophoto 或 odm_texturing）"}, 400
                 )
                 return
-            log_path = os.path.join(proj, "processing.log")
-            with STATE["lock"]:
-                STATE.update(
-                    running=False,
-                    finished=True,
-                    success=True,
-                    name=os.path.basename(proj),
-                    project=proj,
-                    log_path=log_path if os.path.isfile(log_path) else None,
-                    start_time=None,
-                )
-            make_preview(proj)
-            self._send_json({"ok": True, "name": STATE["name"]})
+            name = load_project_state(proj)
+            self._send_json({"ok": True, "name": name})
         elif u.path == "/api/feedback":
             body = self._read_body()
             text = body.get("text", "")

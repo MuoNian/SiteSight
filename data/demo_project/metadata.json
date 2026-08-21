@@ -1,0 +1,10 @@
+{
+  "note": "官方演示成果元数据：来自 2026-08-10 真实航拍（大疆 Lito X1，60 张照片），云端无 GDAL 时由本文件提供场地数据。",
+  "images": 60,
+  "ortho_width": 6749,
+  "ortho_height": 6245,
+  "resolution": 0.05,
+  "elev_min": 48.955,
+  "elev_max": 141.355,
+  "elev_range": 92.4
+}

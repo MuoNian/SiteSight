@@ -5,175 +5,458 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>鹭见 SiteSight - 航拍照片一键三维建模与 AI 场地分析</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
-    background: #f2f5f9;
-    color: #1f2d3d;
-    padding: 24px 16px 60px;
+  :root{
+    --paper:#f4f1e9; --surface:#fffdf8; --ink:#212b3a; --ink-2:#46525f; --ink-3:#5c6a7a;
+    --line:#e2dccd; --line-2:#d3cab8;
+    --accent:#b45f1f; --accent-deep:#96501a; --accent-soft:#f6e9dc;
+    --ok:#2f7d5b; --err:#b4432e; --warn:#a9701c; --info:#3b6ea5; --focus:#1f6fae;
+    --panel:#1c2735; --panel-2:#243140; --panel-line:#37465a; --panel-text:#e9eef5; --panel-dim:#9fb0c4;
+    --mono:"JetBrains Mono",Consolas,"Cascadia Mono","SF Mono",monospace;
+    --sans:"Segoe UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+    --r:14px; --r-sm:10px;
+    --shadow:0 12px 32px rgba(33,43,58,.10); --shadow-sm:0 4px 14px rgba(33,43,58,.08);
   }
-  .wrap { max-width: 880px; margin: 0 auto; }
-  header { text-align: center; margin-bottom: 24px; }
-  header h1 { font-size: 30px; color: #0b5cad; margin-bottom: 6px; letter-spacing: 1px; }
-  header h1 span { color: #2f9ee0; }
-  header p { color: #5c6b7a; font-size: 14px; }
-  .card {
-    background: #fff; border-radius: 12px; padding: 22px 24px;
-    box-shadow: 0 2px 10px rgba(20, 60, 110, 0.07);
-    margin-bottom: 18px;
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); background:var(--paper); color:var(--ink);
+    -webkit-font-smoothing:antialiased; line-height:1.6;
   }
-  .card h2 { font-size: 17px; margin-bottom: 12px; color: #17324f; }
-  .step { display: inline-block; background: #0b5cad; color: #fff; border-radius: 50%;
-    width: 22px; height: 22px; line-height: 22px; text-align: center; font-size: 13px; margin-right: 8px; }
-  .path-row { display: flex; gap: 8px; margin-bottom: 10px; }
-  input[type=text], textarea, select {
-    font-family: inherit;
-    border: 1px solid #c9d6e3; border-radius: 8px; padding: 10px 12px; font-size: 14px;
+  ::selection{background:#d9e4f0;color:var(--ink)}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#c9c0ae;border-radius:8px;border:2px solid var(--paper)}
+  ::-webkit-scrollbar-track{background:transparent}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  .page{max-width:1140px;margin:0 auto;padding:0 22px 72px}
+
+  /* ---------- 顶栏 ---------- */
+  .nav{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:18px 0 14px;position:sticky;top:0;z-index:40;
+    background:rgba(244,241,233,.9);backdrop-filter:blur(8px);
   }
-  input[type=text] { flex: 1; }
-  textarea { width: 100%; min-height: 70px; resize: vertical; margin-bottom: 10px; }
-  .btn { border: none; border-radius: 8px; padding: 10px 18px; font-size: 14px; cursor: pointer; }
-  .btn-blue { background: #0b5cad; color: #fff; }
-  .btn-blue:hover { background: #094e99; }
-  .btn-blue:disabled { background: #a8c4e0; cursor: not-allowed; }
-  .btn-gray { background: #eef2f6; color: #33475b; }
-  .btn-gray:hover { background: #e2e9f0; }
-  .btn-green { background: #1f9d55; color: #fff; }
-  .btn-green:hover { background: #1a8549; }
-  .btn-green:disabled { background: #9fd0b2; cursor: not-allowed; }
-  .dropzone {
-    border: 2px dashed #a9c2da; border-radius: 10px; padding: 26px;
-    text-align: center; color: #5c6b7a; cursor: pointer; transition: all .2s;
+  .brand{display:flex;align-items:center;gap:10px;color:var(--ink)}
+  .brand:hover{text-decoration:none}
+  .brand svg{display:block}
+  .brand-name{font-size:1.06rem;font-weight:600;letter-spacing:.01em}
+  .brand-name b{color:var(--accent);font-weight:700}
+  .nav-links{display:flex;align-items:center;gap:6px}
+  .nav-links a.link{color:var(--ink-2);font-size:.93rem;padding:8px 12px;border-radius:8px}
+  .nav-links a.link:hover{background:rgba(33,43,58,.06);text-decoration:none;color:var(--ink)}
+
+  /* ---------- 按钮 ---------- */
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    border:none;border-radius:var(--r-sm);padding:10px 18px;font-size:.93rem;font-weight:600;
+    font-family:var(--sans);cursor:pointer;transition:background 160ms ease,transform 160ms ease;
+    white-space:nowrap;
   }
-  .dropzone.over { border-color: #0b5cad; background: #eef6ff; }
-  .dropzone b { color: #0b5cad; }
-  .hint { font-size: 12px; color: #8a99a8; margin-top: 6px; }
-  label.check { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 6px 0; cursor: pointer; }
-  .progress-box { display: none; }
-  .stage-line { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
-  .stage-line .st { font-size: 15px; color: #0b5cad; font-weight: 600; }
-  .stage-line .tm { font-size: 13px; color: #5c6b7a; }
-  .bar { height: 14px; background: #e6edf4; border-radius: 8px; overflow: hidden; }
-  .bar > div { height: 100%; width: 0%; background: linear-gradient(90deg, #0b5cad, #2f9ee0); transition: width .6s; }
-  .logbox { margin-top: 12px; background: #0f2438; color: #b9d5ef; border-radius: 8px;
-    padding: 10px 12px; font-family: Consolas, monospace; font-size: 12px; height: 180px; overflow-y: auto;
-    white-space: pre-wrap; word-break: break-all; }
-  .result-box { display: none; }
-  .files { width: 100%; border-collapse: collapse; margin: 10px 0; }
-  .files th, .files td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eef2f6; font-size: 14px; }
-  .files th { color: #5c6b7a; font-weight: normal; font-size: 13px; }
-  .dl { color: #0b5cad; text-decoration: none; font-weight: 600; }
-  .dl:hover { text-decoration: underline; }
-  .preview img { width: 100%; border-radius: 8px; border: 1px solid #e2e9f0; margin-top: 10px; }
-  .msg { font-size: 13px; color: #c0392b; margin-top: 8px; }
-  .msg.green { color: #1f9d55; }
-  .chip { display: inline-block; background: #eef6ff; color: #0b5cad; border: 1px solid #cfe3f7;
-    border-radius: 20px; padding: 4px 12px; font-size: 12px; margin: 4px 6px 4px 0; }
-  .mem-row { display: flex; justify-content: space-between; align-items: center; gap: 10px;
-    background: #f8fafc; border: 1px solid #e2e9f0; border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; font-size: 13px; }
-  .mem-row .del { color: #c0392b; cursor: pointer; border: none; background: none; font-size: 13px; }
-  footer { text-align: center; color: #8a99a8; font-size: 12px; margin-top: 24px; line-height: 1.8; }
+  .btn:active{transform:translateY(1px)}
+  .btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+  .btn-accent{background:var(--accent);color:#fff}
+  .btn-accent:hover{background:var(--accent-deep)}
+  .btn-primary{background:var(--ink);color:var(--surface)}
+  .btn-primary:hover{background:#131b27}
+  .btn-ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line-2)}
+  .btn-ghost:hover{background:rgba(33,43,58,.05);box-shadow:inset 0 0 0 1.5px var(--ink-3)}
+  .btn-sm{padding:7px 13px;font-size:.87rem}
+  .btn .ico{width:16px;height:16px;flex:none}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    display:grid;grid-template-columns:1.04fr .96fr;gap:52px;align-items:center;
+    padding:46px 0 58px;
+  }
+  .hero-copy h1{
+    font-size:2.5rem;line-height:1.22;letter-spacing:-.02em;font-weight:700;color:var(--ink);
+    margin-bottom:18px;max-width:15ch;
+  }
+  .lede{font-size:1.06rem;color:var(--ink-2);max-width:48ch;margin-bottom:26px}
+  .hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+  .hero-note{font-size:.85rem;color:var(--ink-3);display:flex;align-items:center;gap:8px}
+  .hero-note::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--ok)}
+
+  /* 仪器面板 */
+  .instrument{
+    background:var(--panel);color:var(--panel-text);border-radius:18px;
+    box-shadow:0 22px 52px rgba(20,28,40,.34);overflow:hidden;
+  }
+  .instrument-head{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:13px 16px;border-bottom:1px solid var(--panel-line);
+  }
+  .inst-title{font-size:.87rem;font-weight:600;letter-spacing:.02em}
+  .inst-tag{font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;color:var(--panel-dim)}
+  .inst-stage{display:flex;padding:14px 14px 14px 0}
+  .ruler{
+    width:34px;flex:none;position:relative;font-family:var(--mono);font-size:.62rem;color:var(--panel-dim);
+  }
+  .ruler .t{position:absolute;right:10px;transform:translateY(-50%)}
+  .ruler .t::after{content:"";position:absolute;right:-8px;top:50%;width:5px;height:1px;background:var(--panel-line)}
+  .inst-img{position:relative;flex:1;border-radius:10px;overflow:hidden;background:var(--panel-2)}
+  .inst-img img{display:block;width:100%;height:238px;object-fit:cover;filter:saturate(.92)}
+  .inst-img .contours{position:absolute;inset:0;width:100%;height:100%;opacity:.55}
+  .inst-img .scanline{
+    position:absolute;left:0;right:0;height:1px;background:rgba(255,244,224,.7);
+    top:0;
+    animation:scan 1.8s cubic-bezier(.22,.61,.36,1) .25s both;
+  }
+  @keyframes scan{0%{transform:translateY(-10%);opacity:0}18%{opacity:1}100%{transform:translateY(252px);opacity:0}}
+  .inst-readout{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid var(--panel-line);
+  }
+  .ro{padding:12px 14px;border-left:1px solid var(--panel-line)}
+  .ro:first-child{border-left:none}
+  .ro span{display:block;font-size:.7rem;color:var(--panel-dim);margin-bottom:3px}
+  .ro b{font-family:var(--mono);font-size:.88rem;font-weight:600;color:var(--panel-text);white-space:nowrap}
+
+  /* ---------- 地层工作流 ---------- */
+  .strata{padding:10px 0 54px}
+  .section-head{margin-bottom:26px}
+  .section-head h2{font-size:1.5rem;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
+  .section-head p{color:var(--ink-2);margin-top:6px;font-size:.96rem}
+  .strata-list{list-style:none;position:relative;max-width:820px}
+  .strata-list::before{
+    content:"";position:absolute;left:17px;top:14px;bottom:14px;width:1.5px;
+    background:linear-gradient(180deg,var(--line-2),var(--accent) 42%,var(--line-2));
+  }
+  .strata-list li{position:relative;display:flex;gap:26px;padding:14px 0}
+  .strata-list .depth{
+    flex:none;width:36px;height:36px;border-radius:50%;background:var(--surface);
+    border:1.5px solid var(--line-2);display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:.76rem;color:var(--ink-2);z-index:1;
+  }
+  .strata-list h3{font-size:1.06rem;font-weight:700;color:var(--ink);margin-bottom:3px}
+  .strata-list p{color:var(--ink-2);font-size:.93rem;max-width:62ch}
+
+  /* ---------- 工作台 ---------- */
+  .workspace{max-width:940px;margin:0 auto}
+  .panel{
+    background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow-sm);
+    padding:24px 26px;margin-bottom:20px;
+  }
+  .panel-head{margin-bottom:16px}
+  .panel-head h3{font-size:1.08rem;font-weight:700;color:var(--ink)}
+  .panel-head p{color:var(--ink-2);font-size:.88rem;margin-top:4px}
+  .banner{
+    border-radius:var(--r);padding:14px 18px;margin-bottom:20px;font-size:.92rem;
+    background:var(--accent-soft);color:#7c4a16;
+  }
+  .path-row{display:flex;gap:10px;margin-bottom:10px}
+  input[type=text],textarea,select{
+    font-family:var(--sans);border:1.5px solid var(--line-2);border-radius:var(--r-sm);
+    padding:10px 13px;font-size:.93rem;background:var(--surface);color:var(--ink);width:100%;
+    transition:border-color 150ms ease,box-shadow 150ms ease;
+  }
+  input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:var(--focus);box-shadow:0 0 0 3px rgba(31,111,174,.16)}
+  input::placeholder,textarea::placeholder{color:var(--ink-3)}
+  textarea{min-height:76px;resize:vertical;margin-bottom:10px}
+  .dropzone{
+    border:1.5px dashed var(--line-2);border-radius:var(--r);padding:26px;text-align:center;
+    color:var(--ink-2);cursor:pointer;transition:border-color 160ms ease,background 160ms ease;
+  }
+  .dropzone:hover{border-color:var(--accent)}
+  .dropzone.over{border-color:var(--accent);background:var(--accent-soft)}
+  .dropzone b{color:var(--accent);font-weight:600}
+  .hint{font-size:.82rem;color:var(--ink-3);margin-top:7px}
+  .msg{font-size:.88rem;color:var(--err);margin-top:9px}
+  .msg.green{color:var(--ok)}
+  .check{display:flex;align-items:center;gap:9px;font-size:.93rem;margin:8px 0;cursor:pointer;color:var(--ink)}
+  .check input{width:17px;height:17px;accent-color:var(--accent)}
+  .progress-box{display:none;margin-top:16px}
+  .stage-line{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px}
+  .stage-line .st{font-size:.95rem;font-weight:600;color:var(--ink)}
+  .stage-line .tm{font-family:var(--mono);font-size:.8rem;color:var(--ink-2)}
+  .bar{height:10px;background:#e8e2d3;border-radius:6px;overflow:hidden}
+  .bar>div{height:100%;width:100%;transform:scaleX(0);transform-origin:left;background:linear-gradient(90deg,var(--accent-deep),var(--accent));transition:transform .5s ease}
+  .logbox{
+    margin-top:12px;background:#141c26;color:#a9bdd4;border-radius:var(--r-sm);
+    padding:12px 14px;font-family:var(--mono);font-size:.78rem;height:190px;overflow-y:auto;
+    white-space:pre-wrap;word-break:break-all;line-height:1.55;
+  }
+  .logbox::-webkit-scrollbar-thumb{background:#33445a;border-color:#141c26}
+  .result-box{display:none}
+  .files{width:100%;border-collapse:collapse;margin:12px 0 16px}
+  .files th,.files td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);font-size:.92rem}
+  .files th{color:var(--ink-3);font-weight:500;font-size:.8rem}
+  .files td.mono{font-family:var(--mono);font-size:.84rem;color:var(--ink-2)}
+  .dl{color:var(--accent);font-weight:600}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .preview img{width:100%;border-radius:var(--r-sm);margin-top:14px;display:block;box-shadow:var(--shadow-sm)}
+  .report-block{
+    background:#fbf8f1;border-radius:var(--r-sm);padding:18px;font-size:.93rem;line-height:1.75;
+    max-height:520px;overflow-y:auto;white-space:pre-wrap;
+  }
+  .chip{
+    display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);color:#7c4a16;
+    border-radius:20px;padding:4px 12px;font-size:.8rem;margin:4px 6px 4px 0;
+  }
+  .mem-row{
+    display:flex;justify-content:space-between;align-items:center;gap:12px;
+    background:#fbf8f1;border-radius:var(--r-sm);padding:9px 13px;margin-bottom:8px;font-size:.88rem;
+  }
+  .mem-row .del{color:var(--err);cursor:pointer;border:none;background:none;font-size:.85rem;font-weight:600}
+
+  /* ---------- 页脚 ---------- */
+  footer{
+    margin-top:64px;background:var(--panel);color:var(--panel-dim);border-radius:18px;
+    padding:30px 32px;display:flex;flex-wrap:wrap;gap:26px;align-items:flex-start;justify-content:space-between;
+  }
+  footer .f-brand{display:flex;align-items:center;gap:10px;color:var(--panel-text);font-weight:600}
+  footer p{font-size:.84rem;max-width:52ch;line-height:1.7}
+  footer a{color:#c7d6e8}
+
+  /* ---------- 响应式 ---------- */
+  @media (max-width:960px){
+    .hero{grid-template-columns:1fr;gap:34px;padding-top:28px}
+    .hero-copy h1{font-size:2rem}
+    .page{padding:0 16px 56px}
+  }
+  @media (max-width:640px){
+    .inst-readout{grid-template-columns:repeat(2,1fr)}
+    .ro:nth-child(3){border-left:none;border-top:1px solid var(--panel-line)}
+    .ro:nth-child(4){border-top:1px solid var(--panel-line)}
+    .nav-links a.link{display:none}
+    .path-row{flex-direction:column}
+    .workspace{padding:0 2px}
+    .panel{padding:20px 18px}
+    footer{flex-direction:column;gap:14px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .inst-img .scanline{animation:none;display:none}
+    html{scroll-behavior:auto}
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <h1>鹭见 <span>SiteSight</span></h1>
-    <p>航拍照片 → 三维模型 / 正射影像 / DSM / 点云 / AI 场地分析报告（本地处理，数据不上云）</p>
+<!--
+THESIS: 场地剖面仪 —— 把网页读成一件读取地层的仪器；拒绝"蓝色科技感 SaaS 工具"的类别默认。
+OWN-WORLD: 暖纸底 + 墨色仪器面板 + 等高线线稿 + 地层带流程 + 高程标尺；琥珀色只出现在动作与选中态；数据用等宽数字。
+STORY: 访客第一屏看到真实成果被"读"出来（面积/高程/分辨率），点一次官方演示就得到 AI 报告，写一条偏好它就会记住。
+FIRST VIEWPORT: 左侧一句话主张 + 两个动作（加载官方演示 / 开始建模）；右侧暗色仪器面板展示真实正射预览、等高线叠层、高程标尺与四项实测读数。
+FORM: Operate 面 + 品牌首页；流程以地层带呈现（04 层）；seed 2a28bd17（降级滚动，无 challenger）。
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+-->
+<div class="page">
+
+  <header class="nav">
+    <a class="brand" href="#top" aria-label="鹭见 SiteSight 首页">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+        <circle cx="13" cy="13" r="11.2" stroke="var(--accent)" stroke-width="1.6"/>
+        <path d="M4.6 15.4c2.6-3.2 6-3.2 8.4-.4 2.4 2.8 5.4 2.8 8.4-.4" stroke="var(--ink-2)" stroke-width="1.4" stroke-linecap="round"/>
+        <path d="M4.6 19.2c2.6-2.6 6-2.6 8.4-.3 2.4 2.3 5.4 2.3 8.4-.3" stroke="var(--ink-2)" stroke-width="1.4" stroke-linecap="round"/>
+        <circle cx="18.6" cy="7.4" r="1.7" fill="var(--accent)"/>
+      </svg>
+      <span class="brand-name">鹭见 <b>SiteSight</b></span>
+    </a>
+    <nav class="nav-links">
+      <a class="link" href="#workflow">工作流</a>
+      <a class="link" href="#workspace">工作台</a>
+      <a class="link" href="https://github.com/MuoNian/SiteSight" target="_blank" rel="noopener">GitHub</a>
+      <button class="btn btn-accent btn-sm" data-scroll="#workspace">开始使用</button>
+    </nav>
   </header>
 
-  <div class="card">
-    <h2><span class="step">1</span>选择照片（二选一）</h2>
-    <div class="path-row">
-      <input type="text" id="pathInput" placeholder="方式一：直接粘贴照片文件夹路径，例如 C:\Users\Administrator\Desktop\DJI_002_20260809">
-      <button class="btn btn-blue" id="btnUsePath">使用此路径</button>
-    </div>
-    <div class="dropzone" id="dropzone">
-      <p><b>方式二：把照片拖到这里</b>（支持拖入整个文件夹）</p>
-      <p class="hint">或点击此处选择文件 / 文件夹</p>
-      <input type="file" id="fileInput" multiple webkitdirectory style="display:none">
-    </div>
-    <div class="hint" id="uploadInfo"></div>
-    <div class="msg" id="pathMsg"></div>
-  </div>
-
-  <div class="card">
-    <h2><span class="step">0</span>打开已有成果（跳过建模，直接出报告）</h2>
-    <div class="path-row">
-      <input type="text" id="projInput" placeholder="粘贴 ODM 成果文件夹路径，例如 C:\Users\Administrator\Desktop\ODM_Results\project_20260810_155221">
-      <button class="btn btn-blue" id="btnLoadProject">加载成果</button>
-    </div>
-    <div class="msg" id="projMsg"></div>
-    <div class="hint">适合演示：加载 8 月 10 日已生成的完整成果，秒出 AI 场地分析报告。</div>
-  </div>
-
-  <div class="card">
-    <h2><span class="step">2</span>处理选项</h2>
-    <label class="check"><input type="checkbox" id="optDsm" checked> 生成数字表面模型 DSM（测绘用，推荐）</label>
-    <label class="check"><input type="checkbox" id="optFast"> 快速模式（低精度粗模，适合演示/快速出图）</label>
-    <div class="hint">三维模型、正射影像、点云、处理报告始终都会生成。</div>
-  </div>
-
-  <div class="card">
-    <h2><span class="step">3</span>开始处理</h2>
-    <button class="btn btn-green" id="btnStart" disabled>开始处理</button>
-    <span class="hint" id="startHint" style="margin-left:10px">请先选择照片</span>
-    <div class="msg" id="startMsg"></div>
-
-    <div class="progress-box" id="progressBox">
-      <div class="stage-line">
-        <span class="st" id="stageName">正在启动</span>
-        <span class="tm" id="elapsed">00:00</span>
+  <section class="hero" id="top">
+    <div class="hero-copy">
+      <h1>把航拍照片，读成一片真实场地。</h1>
+      <p class="lede">消费级无人机的普通 JPG 照片，一键生成三维模型、正射影像、DSM 与点云，并按建筑学的流程产出 AI 场地分析报告。</p>
+      <div class="hero-actions">
+        <button class="btn btn-accent" id="btnDemo">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none"/></svg>
+          加载官方演示
+        </button>
+        <a class="btn btn-ghost" href="#workspace">开始一次建模</a>
       </div>
-      <div class="bar"><div id="barFill"></div></div>
-      <div class="logbox" id="logBox"></div>
+      <p class="hero-note">本地运行 · 数据不上云 · 基于开源 OpenDroneMap</p>
     </div>
-  </div>
 
-  <div class="card result-box" id="resultBox">
-    <h2><span class="step">4</span>成果下载</h2>
-    <div class="msg green" id="resultMsg"></div>
-    <table class="files" id="filesTable">
-      <tr><th>成果</th><th>大小</th><th></th></tr>
-    </table>
-    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-      <button class="btn btn-blue" id="btnZip">打包下载全部</button>
-      <button class="btn btn-gray" id="btnFolder">打开成果文件夹</button>
-      <span style="font-size:13px; color:#5c6b7a;">导出：</span>
-      <select id="exportFormat" style="padding:8px 10px;">
-        <option value="stl">STL（3D打印/模型）</option>
-        <option value="ply">PLY（点云/网格）</option>
-        <option value="laz">LAZ（压缩点云）</option>
-      </select>
-      <button class="btn btn-gray" id="btnExport">导出选中格式</button>
+    <div class="instrument" aria-label="真实成果演示面板">
+      <div class="instrument-head">
+        <span class="inst-title">场地剖面 · 实测</span>
+        <span class="inst-tag">CASE 2026-08-10</span>
+      </div>
+      <div class="inst-stage">
+        <div class="ruler" aria-hidden="true">
+          <span class="t" style="top:4%">141</span>
+          <span class="t" style="top:34%">100</span>
+          <span class="t" style="top:67%">50</span>
+          <span class="t" style="top:96%">0</span>
+        </div>
+        <div class="inst-img">
+          <img src="/data/demo_project/preview_ortho.png" alt="正射影像预览（2026-08-10 真实航拍成果）">
+          <svg class="contours" viewBox="0 0 400 240" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M-10 212 C60 196 96 224 150 210 C214 192 258 226 318 206 C352 196 378 204 410 196" fill="none" stroke="#ffefd8" stroke-width="1"/>
+            <path d="M-10 178 C66 162 104 192 158 176 C218 156 266 190 322 172 C356 162 382 170 410 162" fill="none" stroke="#ffefd8" stroke-width="1"/>
+            <path d="M-10 144 C72 128 110 158 164 142 C224 122 272 156 328 138 C360 128 386 136 410 128" fill="none" stroke="#ffefd8" stroke-width="1"/>
+            <path d="M-10 110 C78 94 116 124 170 108 C230 88 278 122 334 104 C364 94 390 102 410 94" fill="none" stroke="#ffefd8" stroke-width="1"/>
+            <path d="M-10 76 C84 60 122 90 176 74 C236 54 284 88 340 70 C368 60 394 68 410 60" fill="none" stroke="#ffefd8" stroke-width="1"/>
+            <path d="M-10 42 C90 26 128 56 182 40 C242 20 290 54 346 36 C372 27 396 34 410 26" fill="none" stroke="#ffefd8" stroke-width="1"/>
+          </svg>
+          <div class="scanline"></div>
+        </div>
+      </div>
+      <div class="inst-readout">
+        <div class="ro"><span>覆盖面积</span><b>10.54 公顷</b></div>
+        <div class="ro"><span>高程范围</span><b>48.9–141.4 m</b></div>
+        <div class="ro"><span>地面分辨率</span><b>0.05 m/px</b></div>
+        <div class="ro"><span>航拍影像</span><b>60 张</b></div>
+      </div>
     </div>
-    <div class="preview" id="previewBox"></div>
-  </div>
+  </section>
 
-  <div class="card" id="reportBox" style="display:none;">
-    <h2><span class="step">5</span>AI 场地分析报告</h2>
-    <div class="msg" id="reportMsg"></div>
-    <div id="reportPrefs"></div>
-    <div id="reportContent" style="background:#f8fafc; border:1px solid #e2e9f0; border-radius:8px; padding:16px; font-size:14px; line-height:1.7; max-height:500px; overflow-y:auto; white-space:pre-wrap;"></div>
-    <div style="margin-top:12px;">
-      <button class="btn btn-blue" id="btnReport">重新生成报告</button>
+  <section class="strata" id="workflow">
+    <div class="section-head">
+      <h2>一条从飞行到底图的流程</h2>
+      <p>四次动作，替代传统踏勘与专业测绘软件的核心环节</p>
     </div>
-  </div>
+    <ol class="strata-list">
+      <li><span class="depth">01</span><div><h3>拍摄</h3><p>大疆 Lito X1 等消费级无人机，航向重叠 70–80%、旁向 60–70%，保留 GPS 信息，导出普通 JPG。</p></div></li>
+      <li><span class="depth">02</span><div><h3>重建</h3><p>OpenDroneMap 开源引擎自动重建，产出三维纹理模型（OBJ）、正射影像、DSM、点云与处理报告。</p></div></li>
+      <li><span class="depth">03</span><div><h3>分析</h3><p>AI 按“概况 → 地形 → 适宜性 → 建议”生成中文报告；反馈记忆让它越用越懂你的偏好。</p></div></li>
+      <li><span class="depth">04</span><div><h3>导出</h3><p>OBJ / STL / PLY / LAZ 直达 Rhino、SketchUp 与 3D 打印，形成可用的设计底图。</p></div></li>
+    </ol>
+  </section>
 
-  <div class="card" id="feedbackBox" style="display:none;">
-    <h2><span class="step">6</span>告诉我你的偏好（记忆 Agent）</h2>
-    <p class="hint" style="margin-bottom:8px;">例：“以后报告要突出坡度分析”“面积放在最前面”“不要写水系内容”“报告要更简洁”。下次生成会自动参考。</p>
-    <textarea id="feedbackInput" placeholder="输入你对报告风格的偏好…"></textarea>
-    <button class="btn btn-green" id="btnFeedback">记住这条偏好</button>
-    <div class="msg" id="feedbackMsg"></div>
-    <div style="margin-top:14px;">
-      <h2 style="font-size:15px; margin-bottom:8px;">已记住的偏好</h2>
-      <div id="memList"></div>
+  <section class="workspace" id="workspace">
+    <div class="section-head">
+      <h2>工作台</h2>
+      <p>两种开始方式，云端与本地同一套界面</p>
     </div>
-  </div>
 
-  <footer>由你电脑上的 OpenDroneMap 本地处理 · 照片与模型不会上传到任何服务器<br>
-  鹭见 SiteSight · 大工黑客松 2026 · 奇绩创坛赛道 × 七牛云赛道</footer>
+    <div class="banner" id="modeBanner" hidden></div>
+
+    <div class="panel" id="panelLoad">
+      <div class="panel-head">
+        <h3>从已有成果开始</h3>
+        <p>已有 ODM 成果文件夹？加载后直接看报告、下载文件，无需重新建模。</p>
+      </div>
+      <div class="path-row">
+        <input type="text" id="projInput" placeholder="粘贴成果文件夹路径，例如 C:\Users\Administrator\Desktop\ODM_Results\project_20260810_155221">
+        <button class="btn btn-primary" id="btnLoadProject">加载成果</button>
+      </div>
+      <div class="msg" id="projMsg"></div>
+      <div style="margin-top:12px">
+        <button class="btn btn-ghost btn-sm js-demo">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+          没有成果？一键体验官方演示
+        </button>
+      </div>
+    </div>
+
+    <div class="panel" id="panelBuild">
+      <div class="panel-head">
+        <h3>从照片开始建模</h3>
+        <p>拖入无人机照片或粘贴文件夹路径，自动完成三维重建。</p>
+      </div>
+      <div class="path-row">
+        <input type="text" id="pathInput" placeholder="方式一：粘贴照片文件夹路径，例如 C:\Users\Administrator\Desktop\DJI_002_20260809">
+        <button class="btn btn-primary" id="btnUsePath">使用此路径</button>
+      </div>
+      <div class="dropzone" id="dropzone">
+        <p><b>方式二：把照片拖到这里</b>（支持拖入整个文件夹）</p>
+        <p class="hint">或点击此处选择文件 / 文件夹</p>
+        <input type="file" id="fileInput" multiple webkitdirectory style="display:none">
+      </div>
+      <div class="hint" id="uploadInfo"></div>
+      <div class="msg" id="pathMsg"></div>
+      <div style="margin-top:14px">
+        <label class="check"><input type="checkbox" id="optDsm" checked> 生成数字表面模型 DSM（测绘分析用，推荐）</label>
+        <label class="check"><input type="checkbox" id="optFast"> 快速模式（低精度粗模，适合演示 / 快速出图）</label>
+      </div>
+      <div style="margin-top:12px">
+        <button class="btn btn-accent" id="btnStart" disabled>开始处理</button>
+        <span class="hint" id="startHint" style="margin-left:10px">请先选择照片</span>
+      </div>
+      <div class="msg" id="startMsg"></div>
+      <div class="progress-box" id="progressBox">
+        <div class="stage-line">
+          <span class="st" id="stageName">正在启动</span>
+          <span class="tm" id="elapsed">00:00</span>
+        </div>
+        <div class="bar"><div id="barFill"></div></div>
+        <div class="logbox" id="logBox"></div>
+      </div>
+    </div>
+
+    <div class="panel result-box" id="resultBox">
+      <div class="panel-head">
+        <h3>成果下载</h3>
+        <p>一次处理，产出整套基地资料包。</p>
+      </div>
+      <div class="msg green" id="resultMsg"></div>
+      <table class="files" id="filesTable">
+        <tr><th>成果</th><th>大小</th><th></th></tr>
+      </table>
+      <div class="toolbar">
+        <button class="btn btn-primary btn-sm" id="btnZip">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"/><path d="M3 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2"/><path d="M12 12v7"/><path d="m8 15 4 4 4-4"/></svg>
+          打包下载全部
+        </button>
+        <button class="btn btn-ghost btn-sm" id="btnFolder">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          打开成果文件夹
+        </button>
+        <span class="hint" style="margin:0 4px 0 2px">导出：</span>
+        <select id="exportFormat">
+          <option value="stl">STL（3D 打印 / 模型）</option>
+          <option value="ply">PLY（点云 / 网格）</option>
+          <option value="laz">LAZ（压缩点云）</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" id="btnExport">导出选中格式</button>
+      </div>
+      <div class="preview" id="previewBox"></div>
+    </div>
+
+    <div class="panel" id="reportBox" style="display:none">
+      <div class="panel-head">
+        <h3>AI 场地分析报告</h3>
+        <p>按建筑场地分析流程生成；未配置大模型时自动使用内置模板。</p>
+      </div>
+      <div class="msg" id="reportMsg"></div>
+      <div id="reportPrefs" style="margin:8px 0"></div>
+      <div class="report-block" id="reportContent"></div>
+      <div style="margin-top:12px">
+        <button class="btn btn-primary btn-sm" id="btnReport">重新生成报告</button>
+      </div>
+    </div>
+
+    <div class="panel" id="feedbackBox" style="display:none">
+      <div class="panel-head">
+        <h3>告诉我你的偏好（记忆 Agent）</h3>
+        <p>例：“以后报告要突出坡度分析”“面积放在最前面”“报告要更简洁”。下次生成会自动参考。</p>
+      </div>
+      <textarea id="feedbackInput" placeholder="输入你对报告风格的偏好…"></textarea>
+      <button class="btn btn-accent" id="btnFeedback">记住这条偏好</button>
+      <div class="msg" id="feedbackMsg"></div>
+      <div style="margin-top:18px">
+        <h3 style="font-size:.98rem;margin-bottom:10px">已记住的偏好</h3>
+        <div id="memList"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div>
+      <div class="f-brand">
+        <svg width="24" height="24" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+          <circle cx="13" cy="13" r="11.2" stroke="#c7d6e8" stroke-width="1.6"/>
+          <path d="M4.6 15.4c2.6-3.2 6-3.2 8.4-.4 2.4 2.8 5.4 2.8 8.4-.4" stroke="#9fb0c4" stroke-width="1.4" stroke-linecap="round"/>
+          <path d="M4.6 19.2c2.6-2.6 6-2.6 8.4-.3 2.4 2.3 5.4 2.3 8.4-.3" stroke="#9fb0c4" stroke-width="1.4" stroke-linecap="round"/>
+          <circle cx="18.6" cy="7.4" r="1.7" fill="#c96f2a"/>
+        </svg>
+        <span>鹭见 SiteSight</span>
+      </div>
+      <p style="margin-top:10px">大工黑客松 2026 · 奇绩创坛赛道 × 七牛云赛道<br>基于开源 OpenDroneMap 构建 · 本地处理，数据不上云</p>
+    </div>
+    <div>
+      <a href="https://github.com/MuoNian/SiteSight" target="_blank" rel="noopener">GitHub 仓库 ↗</a>
+      <p style="margin-top:8px">AI 报告由算法自动生成，仅供参考；正式测绘成果须具备相应资质。</p>
+    </div>
+  </footer>
 </div>
 
 <script>
@@ -184,13 +467,49 @@ var uploadInfo = document.getElementById('uploadInfo');
 var pathMsg = document.getElementById('pathMsg');
 var startBtn = document.getElementById('btnStart');
 
-function fmtSize(mb) { return mb >= 1024 ? (mb/1024).toFixed(2)+' GB' : mb.toFixed(1)+' MB'; }
+function fmtSize(mb){ return mb >= 1024 ? (mb/1024).toFixed(2)+' GB' : mb.toFixed(1)+' MB'; }
+function $(id){ return document.getElementById(id); }
 
-dropzone.addEventListener('click', function(){ fileInput.click(); });
-fileInput.addEventListener('change', function(){
-  state.files = Array.from(fileInput.files);
-  setUploadFiles();
+document.querySelectorAll('[data-scroll]').forEach(function(b){
+  b.addEventListener('click', function(){ var t = document.querySelector(b.getAttribute('data-scroll')); if(t) t.scrollIntoView({behavior:'smooth'}); });
 });
+
+/* ---------- 环境信息（云端/本地） ---------- */
+fetch('/api/info').then(function(r){ return r.json(); }).then(function(d){
+  if (d.ok && !d.odm_available){
+    var b = $('modeBanner');
+    b.hidden = false;
+    b.textContent = '当前环境未配置建模引擎（云端演示版）：现场建模请在本机运行完整版；云端可直接“体验官方演示”或加载已有成果。';
+  }
+}).catch(function(){});
+
+/* ---------- 演示加载 ---------- */
+function loadDemo(){
+  var btn = $('btnDemo');
+  var original = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = '正在加载演示…';
+  fetch('/api/demo', { method: 'POST' })
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if (!j.ok){ throw new Error(j.error || '演示加载失败'); }
+      state.name = j.name;
+      $('resultBox').style.display = 'block';
+      $('feedbackBox').style.display = 'block';
+      loadFiles(); loadReport(); loadMemories();
+      document.getElementById('workspace').scrollIntoView({behavior:'smooth'});
+    })
+    .catch(function(e){
+      alert('演示加载失败：' + e.message);
+    })
+    .finally(function(){ btn.disabled = false; btn.innerHTML = original; });
+}
+document.getElementById('btnDemo').addEventListener('click', loadDemo);
+document.querySelectorAll('.js-demo').forEach(function(b){ b.addEventListener('click', loadDemo); });
+
+/* ---------- 选照片 ---------- */
+dropzone.addEventListener('click', function(){ fileInput.click(); });
+fileInput.addEventListener('change', function(){ state.files = Array.from(fileInput.files); setUploadFiles(); });
 dropzone.addEventListener('dragover', function(e){ e.preventDefault(); dropzone.classList.add('over'); });
 dropzone.addEventListener('dragleave', function(){ dropzone.classList.remove('over'); });
 dropzone.addEventListener('drop', function(e){
@@ -204,57 +523,29 @@ function setUploadFiles(){
   var jpgs = state.files.filter(function(f){ return /\.jpe?g$/i.test(f.name); });
   state.files = jpgs;
   if (!jpgs.length){ uploadInfo.textContent = '没有找到 JPG 照片'; state.mode = null; return; }
-  uploadInfo.textContent = '已选择 ' + jpgs.length + ' 张 JPG 照片（合计 ' + fmtSize(jpgs.reduce(function(s,f){return s+f.size;},0)/1048576) + '），点击"开始处理"上传';
-  state.mode = 'upload';
-  pathMsg.textContent = '';
-  startBtn.disabled = false;
-  document.getElementById('startHint').textContent = '';
+  uploadInfo.textContent = '已选择 ' + jpgs.length + ' 张 JPG 照片（合计 ' + fmtSize(jpgs.reduce(function(s,f){return s+f.size;},0)/1048576) + '），点击“开始处理”上传';
+  state.mode = 'upload'; pathMsg.textContent = '';
+  startBtn.disabled = false; $('startHint').textContent = '';
 }
 
-document.getElementById('btnUsePath').addEventListener('click', function(){
-  var v = document.getElementById('pathInput').value.trim();
+$('btnUsePath').addEventListener('click', function(){
+  var v = $('pathInput').value.trim();
   if (!v){ pathMsg.textContent = '请先输入照片文件夹路径'; return; }
   state.mode = 'path'; state.path = v; state.files = [];
-  pathMsg.textContent = '';
-  uploadInfo.textContent = '将使用文件夹：' + v;
-  startBtn.disabled = false;
-  document.getElementById('startHint').textContent = '';
+  pathMsg.textContent = ''; uploadInfo.textContent = '将使用文件夹：' + v;
+  startBtn.disabled = false; $('startHint').textContent = '';
 });
 
-document.getElementById('btnLoadProject').addEventListener('click', function(){
-  var v = document.getElementById('projInput').value.trim();
-  var msg = document.getElementById('projMsg');
-  if (!v){ msg.textContent = '请先粘贴成果文件夹路径'; return; }
-  msg.className = 'msg'; msg.textContent = '正在加载…';
-  fetch('/api/load-project', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ path: v })
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(j){
-    if (!j.ok){ throw new Error(j.error || '加载失败'); }
-    msg.className = 'msg green';
-    msg.textContent = '成果已加载：' + j.name;
-    state.name = j.name;
-    document.getElementById('resultBox').style.display = 'block';
-    document.getElementById('feedbackBox').style.display = 'block';
-    loadFiles();
-    loadReport();
-    loadMemories();
-  })
-  .catch(function(e){ msg.className = 'msg'; msg.textContent = '加载失败：' + e.message; });
-});
-
+/* ---------- 开始处理 ---------- */
 startBtn.addEventListener('click', function(){ startJob(); });
 
 function startJob(){
   if (!state.mode || startBtn.disabled) return;
   startBtn.disabled = true;
-  var msg = document.getElementById('startMsg');
+  var msg = $('startMsg');
   msg.className = 'msg'; msg.textContent = '';
-  var makeDsm = document.getElementById('optDsm').checked;
-  var makeFast = document.getElementById('optFast').checked;
+  var makeDsm = $('optDsm').checked;
+  var makeFast = $('optFast').checked;
   if (state.mode === 'path'){
     postStart({ path: state.path, make_dsm: makeDsm, make_fast: makeFast });
   } else {
@@ -263,7 +554,7 @@ function startJob(){
 }
 
 function beginUpload(makeDsm, makeFast){
-  var msg = document.getElementById('startMsg');
+  var msg = $('startMsg');
   msg.textContent = '正在创建工程…';
   fetch('/api/new-project', { method: 'POST' })
     .then(function(r){ return r.json(); })
@@ -276,7 +567,7 @@ function beginUpload(makeDsm, makeFast){
 }
 
 function uploadFiles(makeDsm, makeFast){
-  var msg = document.getElementById('startMsg');
+  var msg = $('startMsg');
   msg.textContent = '正在上传照片（0/' + state.files.length + '）…';
   var i = 0;
   function next(){
@@ -297,7 +588,7 @@ function uploadFiles(makeDsm, makeFast){
 }
 
 function postStart(body){
-  var msg = document.getElementById('startMsg');
+  var msg = $('startMsg');
   fetch('/api/start', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -318,8 +609,8 @@ function postStart(body){
 }
 
 function showProgress(){
-  document.getElementById('progressBox').style.display = 'block';
-  document.getElementById('resultBox').style.display = 'none';
+  $('progressBox').style.display = 'block';
+  $('resultBox').style.display = 'none';
 }
 
 function fmtTime(s){
@@ -329,47 +620,43 @@ function fmtTime(s){
 
 function poll(){
   fetch('/api/status').then(function(r){ return r.json(); }).then(function(s){
-    document.getElementById('stageName').textContent = s.stage || '处理中';
-    document.getElementById('barFill').style.width = (s.pct||0) + '%';
-    document.getElementById('elapsed').textContent = fmtTime(s.elapsed||0);
-    var log = document.getElementById('logBox');
+    $('stageName').textContent = s.stage || '处理中';
+    $('barFill').style.transform = 'scaleX(' + ((s.pct||0)/100) + ')';
+    $('elapsed').textContent = fmtTime(s.elapsed||0);
+    var log = $('logBox');
     log.textContent = (s.log||[]).join('\n');
     log.scrollTop = log.scrollHeight;
-    if (s.finished){
-      finishJob(s);
-    } else {
-      setTimeout(poll, 2000);
-    }
+    if (s.finished){ finishJob(s); } else { setTimeout(poll, 2000); }
   }).catch(function(){ setTimeout(poll, 3000); });
 }
 
 function finishJob(s){
-  var msg = document.getElementById('startMsg');
+  var msg = $('startMsg');
   if (s.success){
-    msg.className = 'msg green';
-    msg.textContent = '处理完成！';
+    msg.className = 'msg green'; msg.textContent = '处理完成！';
   } else {
-    msg.className = 'msg';
-    msg.textContent = '处理失败，请查看上方日志（或打开成果文件夹里的 processing.log）。';
+    msg.className = 'msg'; msg.textContent = '处理失败，请查看上方日志（或打开成果文件夹里的 processing.log）。';
   }
-  loadFiles();
-  loadReport();
-  document.getElementById('feedbackBox').style.display = 'block';
+  loadFiles(); loadReport();
+  $('feedbackBox').style.display = 'block';
   loadMemories();
 }
 
+/* ---------- 成果列表 ---------- */
 function loadFiles(){
   fetch('/api/files').then(function(r){ return r.json(); }).then(function(d){
-    var tbody = document.getElementById('filesTable');
+    var tbody = $('filesTable');
     tbody.innerHTML = '<tr><th>成果</th><th>大小</th><th></th></tr>';
     (d.files||[]).forEach(function(f){
       var tr = document.createElement('tr');
-      tr.innerHTML = '<td>'+f.label+'</td><td>'+fmtSize(f.size_mb)+'</td>' +
+      tr.innerHTML = '<td>'+f.label+'</td><td class="mono">'+fmtSize(f.size_mb)+'</td>' +
         '<td><a class="dl" href="/download?name='+encodeURIComponent(d.name)+'&file='+encodeURIComponent(f.file)+'">下载</a></td>';
       tbody.appendChild(tr);
     });
-    document.getElementById('resultBox').style.display = 'block';
-    var box = document.getElementById('previewBox');
+    $('resultBox').style.display = 'block';
+    var exportBar = document.querySelector('#resultBox .toolbar');
+    if (exportBar) exportBar.style.display = (d.has_model ? '' : 'none');
+    var box = $('previewBox');
     box.innerHTML = '';
     if (d.success && d.name){
       var img = document.createElement('img');
@@ -380,55 +667,15 @@ function loadFiles(){
   });
 }
 
-function loadMemories(){
-  fetch('/api/memories').then(function(r){ return r.json(); }).then(function(d){
-    var list = document.getElementById('memList');
-    list.innerHTML = '';
-    (d.memories||[]).forEach(function(m){
-      var row = document.createElement('div');
-      row.className = 'mem-row';
-      var left = document.createElement('div');
-      left.textContent = m.text + '　（' + (m.created_at||'') + '）';
-      var del = document.createElement('button');
-      del.className = 'del';
-      del.textContent = '删除';
-      del.onclick = function(){
-        fetch('/api/memories/delete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: m.id })
-        }).then(loadMemories);
-      };
-      row.appendChild(left);
-      row.appendChild(del);
-      list.appendChild(row);
-    });
-  });
-}
-
-document.getElementById('btnZip').addEventListener('click', function(){
-  if (state.name) window.location.href = '/api/zip?name=' + encodeURIComponent(state.name);
-});
-document.getElementById('btnFolder').addEventListener('click', function(){
-  if (state.name) fetch('/api/open-folder?name=' + encodeURIComponent(state.name));
-});
-document.getElementById('btnExport').addEventListener('click', function(){
-  if (!state.name) return;
-  var fmt = document.getElementById('exportFormat').value;
-  window.location.href = '/api/export?name=' + encodeURIComponent(state.name) + '&format=' + encodeURIComponent(fmt);
-});
-document.getElementById('btnReport').addEventListener('click', function(){
-  loadReport(true);
-});
-
+/* ---------- 报告与反馈 ---------- */
 function loadReport(force){
   if (!state.name) return;
   var url = '/api/analyze?name=' + encodeURIComponent(state.name) + (force ? '&force=1' : '');
-  var box = document.getElementById('reportBox');
-  var msg = document.getElementById('reportMsg');
-  var content = document.getElementById('reportContent');
-  var prefs = document.getElementById('reportPrefs');
-  msg.className = 'msg'; msg.textContent = '正在生成AI分析报告…';
+  var box = $('reportBox');
+  var msg = $('reportMsg');
+  var content = $('reportContent');
+  var prefs = $('reportPrefs');
+  msg.className = 'msg'; msg.textContent = '正在生成 AI 分析报告…';
   fetch(url)
     .then(function(r){ return r.json(); })
     .then(function(j){
@@ -451,9 +698,70 @@ function loadReport(force){
     });
 }
 
-document.getElementById('btnFeedback').addEventListener('click', function(){
-  var input = document.getElementById('feedbackInput');
-  var msg = document.getElementById('feedbackMsg');
+function loadMemories(){
+  fetch('/api/memories').then(function(r){ return r.json(); }).then(function(d){
+    var list = $('memList');
+    list.innerHTML = '';
+    (d.memories||[]).forEach(function(m){
+      var row = document.createElement('div');
+      row.className = 'mem-row';
+      var left = document.createElement('div');
+      left.textContent = m.text + '　（' + (m.created_at||'') + '）';
+      var del = document.createElement('button');
+      del.className = 'del';
+      del.textContent = '删除';
+      del.onclick = function(){
+        fetch('/api/memories/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: m.id })
+        }).then(loadMemories);
+      };
+      row.appendChild(left); row.appendChild(del);
+      list.appendChild(row);
+    });
+  });
+}
+
+$('btnLoadProject').addEventListener('click', function(){
+  var v = $('projInput').value.trim();
+  var msg = $('projMsg');
+  if (!v){ msg.textContent = '请先粘贴成果文件夹路径'; return; }
+  msg.className = 'msg'; msg.textContent = '正在加载…';
+  fetch('/api/load-project', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: v })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(j){
+    if (!j.ok){ throw new Error(j.error || '加载失败'); }
+    msg.className = 'msg green';
+    msg.textContent = '成果已加载：' + j.name;
+    state.name = j.name;
+    $('resultBox').style.display = 'block';
+    $('feedbackBox').style.display = 'block';
+    loadFiles(); loadReport(); loadMemories();
+  })
+  .catch(function(e){ msg.className = 'msg'; msg.textContent = '加载失败：' + e.message; });
+});
+
+$('btnZip').addEventListener('click', function(){
+  if (state.name) window.location.href = '/api/zip?name=' + encodeURIComponent(state.name);
+});
+$('btnFolder').addEventListener('click', function(){
+  if (state.name) fetch('/api/open-folder?name=' + encodeURIComponent(state.name));
+});
+$('btnExport').addEventListener('click', function(){
+  if (!state.name) return;
+  var fmt = $('exportFormat').value;
+  window.location.href = '/api/export?name=' + encodeURIComponent(state.name) + '&format=' + encodeURIComponent(fmt);
+});
+$('btnReport').addEventListener('click', function(){ loadReport(true); });
+
+$('btnFeedback').addEventListener('click', function(){
+  var input = $('feedbackInput');
+  var msg = $('feedbackMsg');
   var text = input.value.trim();
   if (!text){ msg.textContent = '请先输入你的偏好'; return; }
   msg.className = 'msg'; msg.textContent = '正在保存…';
