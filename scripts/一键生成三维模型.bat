@@ -37,11 +37,23 @@ if %N% LSS 2 (
     exit /b 1
 )
 
-REM ---------- 3. 建立项目目录 ----------
-REM 注意：ODM 不支持中文路径，成果目录固定用英文 SiteSight_Results
-set "PROJROOT=%USERPROFILE%\Desktop\SiteSight_Results"
+REM ---------- 3. 建立项目目录（默认放在剩余空间大的数据盘，避免 C 盘爆满） ----------
+set "PROJROOT="
 if defined ODM_PROJROOT set "PROJROOT=%ODM_PROJROOT%"
+if not defined PROJROOT if exist D:\ set "PROJROOT=D:\ODM_Results"
+if not defined PROJROOT if exist E:\ set "PROJROOT=E:\ODM_Results"
+if not defined PROJROOT set "PROJROOT=%USERPROFILE%\Desktop\ODM_Results"
 if not exist "%PROJROOT%" mkdir "%PROJROOT%"
+
+REM 检查目标盘剩余空间，少于 20GB 直接停止
+set "PROJDRIVE=%PROJROOT:~0,1%"
+for /f %%i in ('powershell -NoProfile -Command "$f=(Get-PSDrive %PROJDRIVE%).Free/1GB; [math]::Round($f)"') do set "FREEGB=%%i"
+if defined FREEGB if %FREEGB% LSS 20 (
+    echo [错误] %PROJROOT% 所在磁盘只剩 %FREEGB% GB，空间不足，请先清理磁盘
+    echo 也可用环境变量 ODM_PROJROOT 指定其他盘，例如：set ODM_PROJROOT=D:\ODM_Results
+    pause
+    exit /b 1
+)
 
 for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd_HHmmss"') do set "NAME=project_%%i"
 set "PROJ=%PROJROOT%\%NAME%"
@@ -61,7 +73,7 @@ REM ---------- 4. 启动 ODM ----------
 cd /d "D:\WebODM（OpenDroneMap）\ODM"
 set "EXTRA="
 if "%ODM_FAST%"=="1" set "EXTRA=--fast"
-call winrun.bat --project-path "%PROJROOT%" "%NAME%" --dsm %EXTRA% 2>&1 | powershell -NoProfile -Command "$input | Tee-Object -FilePath '%PROJ%\processing.log'"
+call winrun.bat --project-path "%PROJROOT%" "%NAME%" --dsm %EXTRA% --optimize-disk-space 2>&1 | powershell -NoProfile -Command "$input | Tee-Object -FilePath '%PROJ%\processing.log'"
 
 echo.
 echo ============ 处理结果 ============
@@ -70,7 +82,7 @@ if %errorlevel%==0 (
     echo 处理成功！全部成果在：%PROJ%
 ) else (
     echo [失败] ODM 没有正常完成，请打开 processing.log 查看原因
-    echo 常见原因：照片模糊、重叠率不够、照片不是 JPG。
+    echo 常见原因：照片模糊、重叠率不够、照片不是 JPG、磁盘空间不足。
 )
 if not "%ODM_NO_EXPLORER%"=="1" start "" explorer "%PROJ%"
 if not "%ODM_NO_PAUSE%"=="1" pause

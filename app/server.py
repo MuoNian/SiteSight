@@ -35,11 +35,20 @@ ODM_DIR = (
     or r"D:\WebODM（OpenDroneMap）\ODM"
 )
 
-# 成果目录：ODM 不支持中文路径，必须用纯英文路径
+def _default_proj_root():
+    """成果目录默认放在剩余空间大的数据盘（避免 C 盘爆满）；ODM 不支持中文路径。"""
+    for drv in ("D:", "E:"):
+        root = drv + os.sep
+        if os.path.isdir(root) and os.access(root, os.W_OK):
+            return os.path.join(drv, "SiteSight_Results")
+    return os.path.join(os.path.expanduser("~"), "Desktop", "SiteSight_Results")
+
+
+# 成果目录：可用 SITESIGHT_PROJROOT / ODM_WEB_PROJROOT 覆盖
 PROJ_ROOT = (
     os.environ.get("SITESIGHT_PROJROOT")
     or os.environ.get("ODM_WEB_PROJROOT")
-    or os.path.join(os.path.expanduser("~"), "Desktop", "SiteSight_Results")
+    or _default_proj_root()
 )
 
 PORT = int(os.environ.get("SITESIGHT_PORT") or os.environ.get("ODM_WEB_PORT", "8765"))
@@ -237,6 +246,7 @@ def launch_job(name, make_dsm, make_fast=False):
         args.append("--dsm")
     if make_fast:
         args.append("--fast")
+    args.append("--optimize-disk-space")
     proc = subprocess.Popen(
         args,
         cwd=ODM_DIR,
