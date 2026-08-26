@@ -80,7 +80,7 @@ REM ---------- 5. 启动 ODM ----------
 cd /d "D:\WebODM（OpenDroneMap）\ODM"
 set "EXTRA="
 if "%ODM_FAST%"=="1" set "EXTRA=--fast"
-call winrun.bat --project-path "%PROJROOT%" "%NAME%" --dsm %EXTRA% --optimize-disk-space --max-concurrency %ODM_CORES% 2>&1 | powershell -NoProfile -Command "$input | Tee-Object -FilePath '%PROJ%\processing.log'"
+call winrun.bat --project-path "%PROJROOT%" "%NAME%" --dsm %EXTRA% --optimize-disk-space 2>&1 | powershell -NoProfile -Command "$input | Tee-Object -FilePath '%PROJ%\processing.log'"
 
 echo.
 echo ============ 处理结果 ============

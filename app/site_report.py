@@ -115,10 +115,33 @@ def read_odm_metadata(project):
         meta["images"] = len(
             [f for f in os.listdir(images_dir) if f.lower().endswith((".jpg", ".jpeg"))]
         )
+    # 优先读取项目里的 metadata.json 侧车（本地预生成，含稳健统计，云端无 GDAL 也能用）
+    mj = os.path.join(project, "metadata.json")
+    if os.path.isfile(mj):
+        try:
+            with open(mj, "r", encoding="utf-8") as f:
+                m = json.load(f)
+            for k in (
+                "images",
+                "ortho_width",
+                "ortho_height",
+                "resolution",
+                "elev_min",
+                "elev_max",
+                "elev_range",
+            ):
+                if k in m and m[k] is not None:
+                    meta[k] = m[k]
+        except Exception:
+            pass
     for key, rel in [
         ("ortho", "odm_orthophoto/odm_orthophoto.tif"),
         ("dsm", "odm_dem/dsm.tif"),
     ]:
+        if key == "ortho" and meta["ortho_width"]:
+            continue
+        if key == "dsm" and meta["elev_range"]:
+            continue
         fp = os.path.join(project, rel)
         if not os.path.isfile(fp):
             continue
@@ -166,26 +189,6 @@ def read_odm_metadata(project):
                 meta["elev_range"] = round(meta["elev_max"] - meta["elev_min"], 2)
         except Exception:
             pass
-    # 兜底：读取项目里的 metadata.json 侧车（云端无 GDAL 时由本地预生成）
-    if not (meta["ortho_width"] and meta["elev_range"]):
-        mj = os.path.join(project, "metadata.json")
-        if os.path.isfile(mj):
-            try:
-                with open(mj, "r", encoding="utf-8") as f:
-                    m = json.load(f)
-                for k in (
-                    "images",
-                    "ortho_width",
-                    "ortho_height",
-                    "resolution",
-                    "elev_min",
-                    "elev_max",
-                    "elev_range",
-                ):
-                    if k in m and m[k] is not None:
-                        meta[k] = m[k]
-            except Exception:
-                pass
     return meta
 
 
