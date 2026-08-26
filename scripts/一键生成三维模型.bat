@@ -37,7 +37,14 @@ if %N% LSS 2 (
     exit /b 1
 )
 
-REM ---------- 3. 建立项目目录（默认放在剩余空间大的数据盘，避免 C 盘爆满） ----------
+REM ---------- 3. 并行与 GPU 设置 ----------
+REM ODM 默认就会用满全部 CPU 核心；这里显式声明，并在有 NVIDIA 显卡时自动开启 GPU 加速
+set "ODM_CORES=%NUMBER_OF_PROCESSORS%"
+if not defined ODM_CORES set "ODM_CORES=8"
+echo 并行核心：%ODM_CORES% 个（GPU 加速自动检测，无需手动开启）
+echo.
+
+REM ---------- 4. 建立项目目录（默认放在剩余空间大的数据盘，避免 C 盘爆满） ----------
 set "PROJROOT="
 if defined ODM_PROJROOT set "PROJROOT=%ODM_PROJROOT%"
 if not defined PROJROOT if exist D:\ set "PROJROOT=D:\ODM_Results"
@@ -65,15 +72,15 @@ echo 成果目录：%PROJ%
 echo.
 echo 正在复制照片...
 copy "%PHOTODIR%\*.jpg" "%PROJ%\images\" >nul
-echo 复制完成，开始建模（预计 10-40 分钟，请勿关闭本窗口）...
+echo 复制完成，开始建模（预计 10-40 分钟；超大数据集可能数小时，请勿关闭本窗口）...
 echo 处理日志会同时显示在窗口里并保存到 processing.log
 echo.
 
-REM ---------- 4. 启动 ODM ----------
+REM ---------- 5. 启动 ODM ----------
 cd /d "D:\WebODM（OpenDroneMap）\ODM"
 set "EXTRA="
 if "%ODM_FAST%"=="1" set "EXTRA=--fast"
-call winrun.bat --project-path "%PROJROOT%" "%NAME%" --dsm %EXTRA% --optimize-disk-space 2>&1 | powershell -NoProfile -Command "$input | Tee-Object -FilePath '%PROJ%\processing.log'"
+call winrun.bat --project-path "%PROJROOT%" "%NAME%" --dsm %EXTRA% --optimize-disk-space --max-concurrency %ODM_CORES% 2>&1 | powershell -NoProfile -Command "$input | Tee-Object -FilePath '%PROJ%\processing.log'"
 
 echo.
 echo ============ 处理结果 ============
