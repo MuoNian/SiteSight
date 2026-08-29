@@ -1,0 +1,167 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="960" viewBox="0 0 1200 960" font-family="'Microsoft YaHei','PingFang SC',sans-serif">
+  <!-- ============ 方案 1 鹭瞰 · 极简线条 ============ -->
+  <g transform="translate(0,0)">
+    <g stroke="#1C2735" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M150 112 L106 108" stroke-width="4.5"/>
+      <circle cx="150" cy="112" r="8" stroke-width="4"/>
+      <path d="M157 104 C156 93 147 91 145 102" stroke-width="3"/>
+      <path d="M158 113 C172 132 162 151 170 167 C175 177 169 192 164 204" stroke-width="4.5"/>
+      <path d="M164 204 C188 192 217 200 223 220 C227 237 212 249 194 247 C178 245 161 232 164 204 Z" stroke-width="4"/>
+      <path d="M177 213 C193 205 209 207 219 215" stroke-width="3.5"/>
+      <path d="M223 220 C235 216 241 224 243 232" stroke-width="3.5"/>
+      <path d="M186 247 L184 289" stroke-width="4"/>
+      <path d="M202 245 L204 287" stroke-width="4"/>
+      <path d="M184 289 L176 291 M204 287 L212 289" stroke-width="3.5"/>
+    </g>
+    <g stroke="#1C2735" fill="none" stroke-width="2" opacity="0.34" stroke-linecap="round">
+      <path d="M104 305 C144 299 184 311 224 305 S304 301 352 307"/>
+      <path d="M96 321 C136 315 176 327 216 321 S296 317 348 323"/>
+      <path d="M112 337 C152 331 192 343 232 337 S312 333 358 339"/>
+    </g>
+    <circle cx="264" cy="112" r="6" fill="#C96F2A"/>
+    <circle cx="264" cy="112" r="11" fill="none" stroke="#C96F2A" stroke-width="2" opacity="0.5"/>
+    <g stroke="#1C2735" stroke-width="2" opacity="0.28" stroke-linecap="round">
+      <path d="M104 80 H118 M111 73 V87"/>
+    </g>
+    <text x="200" y="392" text-anchor="middle" font-size="17" font-weight="700" fill="#1C2735">鹭瞰 · 极简线条</text>
+    <text x="200" y="416" text-anchor="middle" font-size="13.5" fill="#6B7A8A">细线鹭影 + 测绘等高线</text>
+    <text x="200" y="438" text-anchor="middle" font-size="13.5" fill="#6B7A8A">鹭鸟立于等高线之上，一眼识别航测</text>
+  </g>
+
+  <!-- ============ 方案 2 L·鹭 · 字母融合 ============ -->
+  <g transform="translate(400,0)">
+    <circle cx="200" cy="190" r="110" fill="#1C2735"/>
+    <text x="96" y="262" font-size="168" font-weight="900" fill="#FFFFFF" font-family="Arial,'Helvetica Neue',sans-serif">L</text>
+    <g stroke="#FFFFFF" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M252 118 L232 114" stroke-width="4"/>
+      <circle cx="256" cy="120" r="7" fill="#FFFFFF" stroke="none"/>
+      <path d="M262 126 C258 141 268 148 264 160" stroke-width="4"/>
+      <ellipse cx="282" cy="172" rx="24" ry="15" fill="#FFFFFF" stroke="none"/>
+      <path d="M302 164 C312 160 316 168 314 174" stroke-width="3.5"/>
+      <path d="M276 186 L274 246" stroke-width="4"/>
+      <path d="M290 186 L292 246" stroke-width="4"/>
+      <path d="M274 246 L266 248 M292 246 L300 248" stroke-width="3.5"/>
+    </g>
+    <circle cx="200" cy="66" r="6" fill="#C96F2A"/>
+    <g stroke="#FFFFFF" stroke-width="2.5" opacity="0.75" stroke-linecap="round">
+      <path d="M190 302 H210 M200 292 V312"/>
+    </g>
+    <text x="200" y="392" text-anchor="middle" font-size="17" font-weight="700" fill="#1C2735">L·鹭 · 字母融合</text>
+    <text x="200" y="416" text-anchor="middle" font-size="13.5" fill="#6B7A8A">字标 L + 白鹭栖息剪影</text>
+    <text x="200" y="438" text-anchor="middle" font-size="13.5" fill="#6B7A8A">首字母即品牌，鹭落字上、观测点睛</text>
+  </g>
+
+  <!-- ============ 方案 3 鹭见 · 负空间 ============ -->
+  <g transform="translate(800,0)">
+    <defs>
+      <clipPath id="lens">
+        <circle cx="200" cy="190" r="112"/>
+      </clipPath>
+    </defs>
+    <circle cx="200" cy="190" r="112" fill="none" stroke="#1C2735" stroke-width="7"/>
+    <g clip-path="url(#lens)">
+      <rect x="80" y="70" width="240" height="124" fill="#F7F2E8"/>
+      <rect x="80" y="194" width="240" height="130" fill="#1C2735"/>
+      <g fill="#1C2735">
+        <circle cx="182" cy="136" r="9"/>
+        <polygon points="170,134 142,130 170,142"/>
+        <path d="M178 142 L185 140 L190 176 L181 178 Z"/>
+        <ellipse cx="210" cy="176" rx="22" ry="13" transform="rotate(-10 210 176)"/>
+        <polygon points="228,168 244,172 232,182"/>
+        <rect x="200" y="186" width="3" height="8"/>
+        <rect x="212" y="186" width="3" height="8"/>
+      </g>
+      <g fill="#F7F2E8">
+        <polygon points="140,194 160,194 152,220 132,220"/>
+        <polygon points="186,194 200,194 206,228 180,228"/>
+        <rect x="199" y="180" width="3" height="14"/>
+        <polygon points="228,194 248,194 242,212 222,212"/>
+      </g>
+      <path d="M116 246 C146 238 176 252 206 244 S266 238 292 250" fill="none" stroke="#F7F2E8" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+    <g fill="#C96F2A">
+      <rect x="198" y="66" width="4" height="16" rx="2"/>
+      <rect x="198" y="298" width="4" height="16" rx="2"/>
+      <rect x="74" y="188" width="16" height="4" rx="2"/>
+      <rect x="310" y="188" width="16" height="4" rx="2"/>
+    </g>
+    <text x="200" y="392" text-anchor="middle" font-size="17" font-weight="700" fill="#1C2735">鹭见 · 负空间</text>
+    <text x="200" y="416" text-anchor="middle" font-size="13.5" fill="#6B7A8A">镜头视野 + 鹭与场地倒影</text>
+    <text x="200" y="438" text-anchor="middle" font-size="13.5" fill="#6B7A8A">鹭之所见即场地，负空间藏城市天际线</text>
+  </g>
+
+  <!-- ============ 方案 4 格鹭 · 几何秩序 ============ -->
+  <g transform="translate(0,480)">
+    <polygon points="90,225 132,180 268,180 310,225 268,270 132,270" fill="#2A3B52"/>
+    <polygon points="268,180 310,225 310,244 268,289" fill="#1B2939"/>
+    <polygon points="132,180 90,225 90,244 132,289" fill="#223244"/>
+    <polygon points="118,160 152,120 248,120 282,160 248,200 152,200" fill="#22344C"/>
+    <polygon points="248,120 282,160 282,176 248,216" fill="#16222F"/>
+    <polygon points="152,120 118,160 118,176 152,216" fill="#1C2B3D"/>
+    <polygon points="150,105 176,72 224,72 250,105 224,138 176,138" fill="#1A2B42"/>
+    <polygon points="224,72 250,105 250,118 224,151" fill="#121D29"/>
+    <polygon points="176,72 150,105 150,118 176,151" fill="#16232F"/>
+    <circle cx="228" cy="100" r="5" fill="#C96F2A"/>
+    <g fill="#F5EFE2">
+      <polygon points="200,20 150,72 200,56"/>
+      <polygon points="200,20 250,72 200,56"/>
+      <polygon points="200,20 190,76 210,76"/>
+      <polygon points="190,76 176,86 192,82"/>
+      <polygon points="210,76 224,80 210,68"/>
+    </g>
+    <text x="200" y="392" text-anchor="middle" font-size="17" font-weight="700" fill="#1C2735">格鹭 · 几何秩序</text>
+    <text x="200" y="416" text-anchor="middle" font-size="13.5" fill="#6B7A8A">等距地形网格 + 三角白鹭</text>
+    <text x="200" y="438" text-anchor="middle" font-size="13.5" fill="#6B7A8A">无人机视野下的场地，理性而国际化</text>
+  </g>
+
+  <!-- ============ 方案 5 鹭徽 · 对称徽记 ============ -->
+  <g transform="translate(400,480)">
+    <circle cx="200" cy="190" r="116" fill="#FFFFFF" stroke="#1C2735" stroke-width="3.5"/>
+    <circle cx="200" cy="190" r="96" fill="none" stroke="#1C2735" stroke-width="1.2"/>
+    <g stroke="#1C2735" stroke-width="1.8" stroke-linecap="round">
+      <path d="M200 74 L200 82"/>
+      <path d="M222.3 84.3 L226.5 88.5"/>
+      <path d="M316 190 L324 190"/>
+      <path d="M222.3 295.7 L226.5 291.5"/>
+      <path d="M200 306 L200 298"/>
+      <path d="M177.7 295.7 L173.5 291.5"/>
+      <path d="M84 190 L76 190"/>
+      <path d="M177.7 84.3 L173.5 88.5"/>
+    </g>
+    <g fill="#1C2735">
+      <polygon points="200,56 162,100 200,86"/>
+      <polygon points="200,56 238,100 200,86"/>
+      <polygon points="200,56 192,98 208,98"/>
+    </g>
+    <polygon points="200,126 252,155 252,213 200,242 148,213 148,155" fill="none" stroke="#C96F2A" stroke-width="3.5" stroke-linejoin="round"/>
+    <ellipse cx="200" cy="184" rx="36" ry="22" fill="none" stroke="#C96F2A" stroke-width="1.6" opacity="0.75"/>
+    <ellipse cx="200" cy="184" rx="20" ry="12" fill="none" stroke="#C96F2A" stroke-width="1.6" opacity="0.5"/>
+    <circle cx="200" cy="184" r="5" fill="#C96F2A"/>
+    <path d="M148 262 C172 250 196 254 200 262 C204 254 228 250 252 262" fill="none" stroke="#1C2735" stroke-width="2.5" stroke-linecap="round" opacity="0.45"/>
+    <text x="200" y="392" text-anchor="middle" font-size="17" font-weight="700" fill="#1C2735">鹭徽 · 对称徽记</text>
+    <text x="200" y="416" text-anchor="middle" font-size="13.5" fill="#6B7A8A">罗盘环抱场地 + 展翅鹭</text>
+    <text x="200" y="438" text-anchor="middle" font-size="13.5" fill="#6B7A8A">测绘徽章气质，权威而稳定</text>
+  </g>
+
+  <!-- ============ 方案 6 鹭印 · 篆刻印章 ============ -->
+  <g transform="translate(800,480)">
+    <rect x="100" y="90" width="200" height="200" fill="none" stroke="#C2403A" stroke-width="10"/>
+    <rect x="112" y="102" width="176" height="176" fill="none" stroke="#C2403A" stroke-width="3" opacity="0.55"/>
+    <text x="230" y="208" text-anchor="middle" font-size="88" font-weight="700" fill="#C2403A" font-family="KaiTi,'STKaiti','Microsoft YaHei',serif">鹭</text>
+    <text x="230" y="284" text-anchor="middle" font-size="84" font-weight="700" fill="#C2403A" font-family="KaiTi,'STKaiti','Microsoft YaHei',serif">见</text>
+    <g stroke="#C2403A" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M118 136 C118 126 128 124 132 132" stroke-width="5"/>
+      <path d="M129 136 C129 150 137 156 133 170" stroke-width="5"/>
+      <path d="M133 170 C147 166 159 172 163 184" stroke-width="5"/>
+      <path d="M151 184 L151 210" stroke-width="5"/>
+      <path d="M161 182 L163 206" stroke-width="5"/>
+      <path d="M151 210 L143 212 M163 206 L171 208" stroke-width="4.5"/>
+    </g>
+    <rect x="98" y="196" width="11" height="6" fill="#FFFFFF"/>
+    <rect x="248" y="226" width="9" height="8" fill="#FFFFFF"/>
+    <rect x="292" y="140" width="12" height="5" fill="#FFFFFF"/>
+    <text x="200" y="392" text-anchor="middle" font-size="17" font-weight="700" fill="#1C2735">鹭印 · 篆刻印章</text>
+    <text x="200" y="416" text-anchor="middle" font-size="13.5" fill="#6B7A8A">朱文印 + 肖形鹭</text>
+    <text x="200" y="438" text-anchor="middle" font-size="13.5" fill="#6B7A8A">东方印章气韵，鹭见即“路见”</text>
+  </g>
+</svg>
