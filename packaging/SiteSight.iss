@@ -22,7 +22,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 Name: "desktopicon"; Description: "创建桌面快捷方式"; GroupDescription: "附加任务:"; Flags: checkedonce
 
 [Files]
-Source: "dist\SiteSight\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
+Source: "..\dist\SiteSight\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

@@ -23,6 +23,14 @@ work/
 *.obj
 *.zip
 
+# === 打包产物（体积大，不入库）===
+dist/
+build/
+SiteSight.spec
+packaging/output/
+packaging/build_log.txt
+packaging/build_err.txt
+
 # === 系统文件 ===
 Thumbs.db
 Desktop.ini
