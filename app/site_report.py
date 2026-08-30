@@ -25,6 +25,7 @@ ODM_DIR = (
 
 # 本地 API 配置文件（不入库），也可用环境变量直接指定
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+USER_CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".sitesight", "config.json")
 
 
 def load_providers():
@@ -41,24 +42,26 @@ def load_providers():
                 "model": os.environ.get("LLM_MODEL", "gpt-4o-mini"),
             }
         )
-    # 2) 本地配置文件 app/config.json（格式见 config.example.json）
-    if os.path.isfile(CONFIG_PATH):
-        try:
-            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            for p in data.get("providers", []):
-                if p.get("api_key"):
-                    providers.append(
-                        {
-                            "name": p.get("name", "provider"),
-                            "base_url": p["base_url"],
-                            "api_key": p["api_key"],
-                            "model": p.get("model", "gpt-4o-mini"),
-                            "max_tokens": p.get("max_tokens", 4096),
-                        }
-                    )
-        except Exception as e:
-            print("读取 config.json 失败：", e)
+    # 2) 本地配置文件（设置页写入的用户配置优先，其次安装目录 app/config.json）
+    for cfg in (USER_CONFIG_PATH, CONFIG_PATH):
+        if os.path.isfile(cfg):
+            try:
+                with open(cfg, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                for p in data.get("providers", []):
+                    if p.get("api_key"):
+                        providers.append(
+                            {
+                                "name": p.get("name", "provider"),
+                                "base_url": p["base_url"],
+                                "api_key": p["api_key"],
+                                "model": p.get("model", "gpt-4o-mini"),
+                                "max_tokens": p.get("max_tokens", 4096),
+                            }
+                        )
+                break
+            except Exception as e:
+                print("读取", cfg, "失败：", e)
     return providers
 
 

@@ -28,6 +28,25 @@ from site_report import generate_report
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
+APP_NAME = "鹭见 SiteSight"
+APP_VERSION = "1.0.0"
+APP_ITERATION = "迭代 2"
+
+# 用户设置存放目录（可写，不会随安装目录变动）
+CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".sitesight")
+SETTINGS_FILE = os.path.join(CONFIG_DIR, "settings.json")
+
+
+def _load_settings():
+    try:
+        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+SETTINGS = _load_settings()
+
 # ODM 安装目录（脚本内部已修复过编码问题）
 ODM_DIR = (
     os.environ.get("SITESIGHT_ODMDIR")
@@ -36,20 +55,83 @@ ODM_DIR = (
 )
 
 def _default_proj_root():
-    """成果目录默认放在剩余空间大的数据盘（避免 C 盘爆满）；ODM 不支持中文路径。"""
+    """成果目录默认与程序安装目录保持一致；不可写时回退到数据盘。"""
+    base = os.path.dirname(BASE_DIR)
+    cand = os.path.join(base, "SiteSight_Results")
+    if os.path.isdir(base) and os.access(base, os.W_OK):
+        return cand
     for drv in ("D:", "E:"):
         root = drv + os.sep
         if os.path.isdir(root) and os.access(root, os.W_OK):
             return os.path.join(drv, "SiteSight_Results")
-    return os.path.join(os.path.expanduser("~"), "Desktop", "SiteSight_Results")
+    return os.path.join(os.path.expanduser("~"), "SiteSight_Results")
 
 
 # 成果目录：可用 SITESIGHT_PROJROOT / ODM_WEB_PROJROOT 覆盖
 PROJ_ROOT = (
     os.environ.get("SITESIGHT_PROJROOT")
     or os.environ.get("ODM_WEB_PROJROOT")
+    or SETTINGS.get("results_dir")
     or _default_proj_root()
 )
+TEMP_DIR = SETTINGS.get("temp_dir") or os.path.join(os.path.dirname(BASE_DIR), "tmp")
+
+
+def apply_settings(results_dir=None, temp_dir=None, providers=None):
+    """保存并应用设置（成果目录/临时目录/API 供应商）。"""
+    global PROJ_ROOT, TEMP_DIR, SETTINGS
+    changed = []
+    if results_dir is not None or temp_dir is not None:
+        results = (results_dir or PROJ_ROOT).strip()
+        temp = (temp_dir or TEMP_DIR).strip()
+        for label, d in (("成果目录", results), ("临时目录", temp)):
+            if not os.path.isdir(d):
+                try:
+                    os.makedirs(d, exist_ok=True)
+                except Exception:
+                    return {"ok": False, "error": "无法创建%s：%s（请检查路径权限）" % (label, d)}
+        if results != PROJ_ROOT:
+            PROJ_ROOT = results
+            SETTINGS["results_dir"] = results
+            changed.append("成果目录")
+        if temp != TEMP_DIR:
+            TEMP_DIR = temp
+            SETTINGS["temp_dir"] = temp
+            changed.append("临时目录")
+    if providers is not None:
+        existing = []
+        old_cfg = os.path.join(CONFIG_DIR, "config.json")
+        if os.path.isfile(old_cfg):
+            try:
+                with open(old_cfg, "r", encoding="utf-8") as f:
+                    existing = json.load(f).get("providers", [])
+            except Exception:
+                pass
+        for p in providers:
+            if not p.get("api_key"):
+                for e in existing:
+                    if e.get("name") == p.get("name") and e.get("api_key"):
+                        p["api_key"] = e["api_key"]
+                        break
+        providers = [p for p in providers if p.get("name") or p.get("api_key")]
+        os.makedirs(CONFIG_DIR, exist_ok=True)
+        with open(old_cfg, "w", encoding="utf-8") as f:
+            json.dump({"providers": providers}, f, ensure_ascii=False, indent=2)
+        SETTINGS["providers"] = providers
+        changed.append("API 接入")
+    try:
+        os.makedirs(CONFIG_DIR, exist_ok=True)
+        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+            json.dump(SETTINGS, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        return {"ok": False, "error": "保存设置失败：" + str(e)}
+    return {
+        "ok": True,
+        "changed": changed,
+        "results_dir": PROJ_ROOT,
+        "temp_dir": TEMP_DIR,
+        "note": "成果/临时目录已生效；正在处理中的任务不受影响。",
+    }
 
 PORT = int(os.environ.get("SITESIGHT_PORT") or os.environ.get("ODM_WEB_PORT", "8765"))
 NO_BROWSER = os.environ.get("SITESIGHT_NO_BROWSER") == "1"
@@ -159,6 +241,47 @@ def parse_stage(lines):
     return STAGES[idx][1], int((idx + 0.5) / len(STAGES) * 100)
 
 
+def estimate_eta(elapsed, pct):
+    """根据已用时长与进度估算剩余秒数（简单线性外推）。"""
+    if not elapsed or not pct or pct <= 2 or pct >= 100:
+        return None
+    return int(elapsed / pct * (100 - pct))
+
+
+ERROR_RULES = [
+    ("no space left", "磁盘空间不足：请清理磁盘，或在『设置』中把成果目录改到空间更大的盘。"),
+    ("disk quota", "磁盘空间不足：请清理磁盘，或在『设置』中把成果目录改到空间更大的盘。"),
+    ("memoryerror", "内存不足：请关闭其他占用内存的程序后重试，或改用『快速』精度。"),
+    ("out of memory", "内存不足：请关闭其他占用内存的程序后重试，或改用『快速』精度。"),
+    ("not enough matches", "照片之间重合度过低：请确保相邻照片重叠率在 60% 以上，或补拍后重试。"),
+    ("no matches", "照片特征点不足：请检查照片是否清晰、是否过度曝光，或补拍后重试。"),
+    ("camera not supported", "相机型号暂不支持：请先用 EXIF 工具检查照片，或联系开发者。"),
+    ("could not find", "找不到所需文件或程序：请检查成果目录与 ODM 引擎是否完整。"),
+    ("traceback", "处理过程出现异常：请查看下方日志详情，或重试一次。"),
+    ("exception", "处理过程出现异常：请查看下方日志详情，或重试一次。"),
+]
+
+
+def summarize_error(lines):
+    """从日志尾部提取错误行，并给出中文原因与建议。"""
+    hits = []
+    for ln in reversed(lines):
+        low = ln.lower()
+        if any(k in low for k in ("error", "failed", "traceback", "exception", "abort")):
+            hits.append(ln.strip())
+        if len(hits) >= 5:
+            break
+    hits.reverse()
+    tip = None
+    for kw, msg in ERROR_RULES:
+        if any(kw in ln.lower() for ln in hits):
+            tip = msg
+            break
+    if not tip and hits:
+        tip = "任务未能成功完成，请对照下方日志检查照片与磁盘空间后重试。"
+    return {"lines": hits, "tip": tip}
+
+
 def status_dict():
     lines = read_log_tail(400)
     stage, pct = parse_stage(lines)
@@ -172,9 +295,14 @@ def status_dict():
         "stage": stage,
         "pct": pct,
         "elapsed": elapsed,
+        "eta": estimate_eta(elapsed, pct),
         "name": STATE.get("name"),
         "log": read_log_tail(40),
     }
+    if STATE.get("finished") and not STATE.get("success"):
+        d["error_summary"] = summarize_error(lines)
+    else:
+        d["error_summary"] = {"lines": [], "tip": None}
     if STATE.get("project"):
         d["preview"] = "/preview?name=%s" % os.path.basename(STATE["project"])
     return d
@@ -226,7 +354,7 @@ def copy_jpgs(src_dir, dest_dir):
     return n
 
 
-def launch_job(name, make_dsm, make_fast=False):
+def launch_job(name, make_dsm, make_fast=False, quality="standard"):
     project = os.path.join(PROJ_ROOT, name)
     log_path = os.path.join(project, "processing.log")
     with open(log_path, "w", encoding="utf-8", errors="replace"):
@@ -242,10 +370,17 @@ def launch_job(name, make_dsm, make_fast=False):
         PROJ_ROOT,
         name,
     ]
-    if make_dsm:
+    if quality == "high":
         args.append("--dsm")
-    if make_fast:
+        args.append("--pc-quality")
+        args.append("high")
+    elif quality == "fast":
         args.append("--fast")
+    else:
+        if make_dsm:
+            args.append("--dsm")
+        if make_fast:
+            args.append("--fast")
     args.append("--optimize-disk-space")
     proc = subprocess.Popen(
         args,
@@ -457,6 +592,12 @@ class Handler(BaseHTTPRequestHandler):
         p = u.path
         if p in ("/", "/index.html"):
             self._serve_file(os.path.join(STATIC_DIR, "index.html"))
+        elif p.startswith("/assets/"):
+            fp = os.path.realpath(os.path.join(STATIC_DIR, p.lstrip("/")))
+            if fp.startswith(os.path.realpath(STATIC_DIR) + os.sep) and os.path.isfile(fp):
+                self._serve_file(fp)
+            else:
+                self.send_error(404)
         elif p.startswith("/data/"):
             rel = p[len("/data/"):]
             data_root = os.path.realpath(os.path.join(os.path.dirname(BASE_DIR), "data"))
@@ -469,6 +610,9 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(
                 {
                     "ok": True,
+                    "app_name": APP_NAME,
+                    "version": APP_VERSION,
+                    "iteration": APP_ITERATION,
                     "platform": platform.system(),
                     "odm_available": odm_available(),
                     "demo_project": os.path.isdir(DEMO_PROJ),
@@ -569,6 +713,84 @@ class Handler(BaseHTTPRequestHandler):
                 self._serve_file(fp, os.path.basename(fp))
             else:
                 self.send_error(404)
+        elif p == "/api/results":
+            items = []
+            if os.path.isdir(PROJ_ROOT):
+                for name in os.listdir(PROJ_ROOT):
+                    proj = os.path.join(PROJ_ROOT, name)
+                    if not os.path.isdir(proj) or name.startswith("."):
+                        continue
+                    size = 0
+                    for root, _, files in os.walk(proj):
+                        for fn in files:
+                            try:
+                                size += os.path.getsize(os.path.join(root, fn))
+                            except OSError:
+                                pass
+                    items.append(
+                        {
+                            "name": name,
+                            "mtime": os.path.getmtime(proj),
+                            "size_mb": round(size / 1048576, 1),
+                            "has_model": os.path.isdir(os.path.join(proj, "odm_texturing")),
+                            "has_preview": os.path.isfile(os.path.join(proj, "preview_ortho.png")),
+                            "running": STATE.get("running") and STATE.get("name") == name,
+                        }
+                    )
+            items.sort(key=lambda d: d["mtime"], reverse=True)
+            if os.path.isdir(DEMO_PROJ):
+                size = 0
+                for root, _, files in os.walk(DEMO_PROJ):
+                    for fn in files:
+                        try:
+                            size += os.path.getsize(os.path.join(root, fn))
+                        except OSError:
+                            pass
+                items.append(
+                    {
+                        "name": "demo_project",
+                        "mtime": os.path.getmtime(DEMO_PROJ),
+                        "size_mb": round(size / 1048576, 1),
+                        "has_model": os.path.isdir(os.path.join(DEMO_PROJ, "odm_texturing")),
+                        "has_preview": os.path.isfile(os.path.join(DEMO_PROJ, "preview_ortho.png")),
+                        "running": False,
+                        "demo": True,
+                    }
+                )
+            self._send_json({"ok": True, "results": items, "root": PROJ_ROOT})
+        elif p == "/api/settings":
+            cfg_path = os.path.join(CONFIG_DIR, "config.json")
+            providers = []
+            for cand in (cfg_path, os.path.join(BASE_DIR, "config.json")):
+                if os.path.isfile(cand):
+                    try:
+                        with open(cand, "r", encoding="utf-8") as f:
+                            providers = json.load(f).get("providers", [])
+                        break
+                    except Exception:
+                        continue
+            masked = []
+            for pr in providers:
+                key = pr.get("api_key", "") or ""
+                masked.append(
+                    {
+                        "name": pr.get("name", ""),
+                        "base_url": pr.get("base_url", ""),
+                        "model": pr.get("model", ""),
+                        "has_key": bool(key),
+                        "key_tail": key[-4:] if len(key) > 4 else "",
+                    }
+                )
+            self._send_json(
+                {
+                    "ok": True,
+                    "results_dir": PROJ_ROOT,
+                    "temp_dir": TEMP_DIR,
+                    "default_results_dir": _default_proj_root(),
+                    "providers": masked,
+                    "api_configured": any(p["has_key"] for p in masked),
+                }
+            )
         else:
             self.send_error(404)
 
@@ -602,6 +824,7 @@ class Handler(BaseHTTPRequestHandler):
             photo_path = body.get("path")
             make_dsm = bool(body.get("make_dsm", True))
             make_fast = bool(body.get("make_fast", False))
+            quality = body.get("quality", "standard")
             project = os.path.join(PROJ_ROOT, name)
             os.makedirs(os.path.join(project, "images"), exist_ok=True)
             if photo_path:
@@ -623,7 +846,7 @@ class Handler(BaseHTTPRequestHandler):
             if n < 2:
                 self._send_json({"ok": False, "error": "至少需要 2 张 JPG 照片（当前 %d 张）" % n}, 400)
                 return
-            launch_job(name, make_dsm, make_fast)
+            launch_job(name, make_dsm, make_fast, quality)
             self._send_json({"ok": True, "name": name, "count": n})
         elif u.path == "/api/demo":
             if not os.path.isdir(DEMO_PROJ):
@@ -658,6 +881,14 @@ class Handler(BaseHTTPRequestHandler):
             body = self._read_body()
             ok = memory_agent.delete_memory(body.get("id", ""))
             self._send_json({"ok": ok})
+        elif u.path == "/api/settings":
+            body = self._read_body()
+            r = apply_settings(
+                results_dir=body.get("results_dir"),
+                temp_dir=body.get("temp_dir"),
+                providers=body.get("providers"),
+            )
+            self._send_json(r, 200 if r.get("ok") else 400)
         else:
             self.send_error(404)
 

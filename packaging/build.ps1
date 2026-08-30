@@ -1,4 +1,4 @@
-# SiteSight packaging script (PyInstaller + Inno Setup)
+﻿# SiteSight packaging script (PyInstaller + Inno Setup)
 # Usage: from repo root: powershell -ExecutionPolicy Bypass -File packaging\build.ps1
 
 $ErrorActionPreference = "Stop"
