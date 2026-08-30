@@ -130,7 +130,9 @@
   /* 演示动图 */
   .demo{position:relative;overflow:hidden;border-radius:var(--r);border:1px solid var(--line);height:300px;background:#eae6dc}
   .demo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:kenburns 16s ease-in-out infinite alternate}
+  .demo video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
   @keyframes kenburns{from{transform:scale(1) translate(0,0)}to{transform:scale(1.12) translate(-1.2%,1.4%)}}
+  .demo-link{font-size:.76rem;color:var(--ink-3);margin-top:10px;word-break:break-all}
   .demo .mask{position:absolute;inset:0;background:linear-gradient(180deg,rgba(28,39,53,.08),rgba(28,39,53,.55));display:flex;align-items:flex-end;padding:22px}
   .demo .mask .t{color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.45)}
   .demo .mask .t b{font-size:1.05rem}
@@ -320,12 +322,10 @@ function homeHTML() {
       '</div>' +
     '</div>' +
     '<div class="card" style="margin-top:16px">' +
-      '<h2>产品演示 <span class="tag">示意动画</span></h2>' +
-      '<p class="desc">从拍摄到成果的完整流程：上传照片 → 云端精度重建 → AI 分析场地 → 输出报告与模型。</p>' +
-      '<div class="demo">' +
-        '<img src="/data/demo_project/preview_ortho.png" alt="正射影像示例">' +
-        '<div class="mask"><div class="t"><b>航拍照片 → 真实三维场地</b><p>正射影像与 DSM 自动生成，无需手动标定</p></div></div>' +
-      '</div>' +
+      '<h2>产品演示 <span class="tag">3 倍速视频</span></h2>' +
+      '<p class="desc">从拍摄到成果的完整流程（3 倍速）：上传照片 → 三维重建 → AI 分析场地 → 输出成果。</p>' +
+      '<div class="demo"><video src="/data/demo_project/demo_video_3x.mp4" autoplay muted loop controls playsinline></video></div>' +
+      '<p class="demo-link">测试素材下载：<a href="https://github.com/MuoNian/SiteSight/releases/download/test-data-v1/SiteSight_TestPhotos_60.zip" target="_blank" rel="noopener">SiteSight_TestPhotos_60.zip（1.4GB · 60 张航拍照片）</a></p>' +
       '<div class="steps">' +
         '<div class="st"><div class="ico">📷</div><div class="lbl">拍摄照片</div><div class="dst">无人机环绕拍摄</div></div>' +
         '<div class="st"><div class="ico">🧊</div><div class="lbl">三维重建</div><div class="dst">点云 · 网格 · 纹理</div></div>' +
@@ -351,6 +351,12 @@ function homeHTML() {
 function helpHTML() {
   return '<div class="wrap">' +
     '<div class="view-head"><h1>帮助</h1><p>拍摄方法 · 硬件需求 · 使用说明</p></div>' +
+    '<details class="help" open>' +
+      '<summary>📥 测试资料下载</summary>' +
+      '<div class="body"><p>不想自己拍照片？可直接下载测试素材包（60 张 DJI 无人机航拍照片，约 1.4 GB，已含 GPS 信息）：</p>' +
+      '<p><a href="https://github.com/MuoNian/SiteSight/releases/download/test-data-v1/SiteSight_TestPhotos_60.zip" target="_blank" rel="noopener">https://github.com/MuoNian/SiteSight/releases/download/test-data-v1/SiteSight_TestPhotos_60.zip</a></p>' +
+      '<p>下载后解压，在「启动程序」中选择该照片文件夹，即可开始完整建模测试。</p></div>' +
+    '</details>' +
     '<details class="help" open>' +
       '<summary>📷 无人机怎么拍</summary>' +
       '<div class="body"><ul>' +
