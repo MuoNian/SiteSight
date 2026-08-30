@@ -555,6 +555,28 @@ def kill_odm():
                 pass
 
 
+def save_file_dialog(default_name):
+    """弹出系统『另存为』对话框，返回选择路径；取消返回 None。"""
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        buf = ctypes.create_unicode_buffer(1024)
+        buf.value = default_name or "SiteSight_export"
+        ofn = wintypes.OPENFILENAMEW()
+        ofn.lStructSize = ctypes.sizeof(wintypes.OPENFILENAMEW)
+        ofn.lpstrFilter = "所有文件\0*.*\0\0"
+        ofn.lpstrFile = buf
+        ofn.nMaxFile = 1024
+        # OFN_OVERWRITEPROMPT | OFN_HIDEREADONLY | OFN_PATHMUSTEXIST
+        ofn.Flags = 0x00000002 | 0x00000004 | 0x00000800
+        if ctypes.windll.comdlg32.GetSaveFileNameW(ctypes.byref(ofn)):
+            return buf.value
+    except Exception:
+        pass
+    return None
+
+
 def export_stl(project):
     """把带纹理 OBJ 转成 STL（3D 打印/模型用）。"""
     obj_path = os.path.join(project, "odm_texturing", "odm_textured_model_geo.obj")
@@ -798,6 +820,51 @@ class Handler(BaseHTTPRequestHandler):
                 self._serve_file(fp, chinese_name(fp))
             else:
                 self.send_error(404)
+        elif p == "/api/export-save":
+            name = q.get("name", [""])[0]
+            fmt = q.get("format", [""])[0]
+            project = resolve_project(name)
+            if not project:
+                self._send_json({"ok": False, "error": "项目不存在"}, 404)
+                return
+            if fmt == "zip":
+                src, default_name = build_zip(project), "全部成果.zip"
+            elif fmt == "stl":
+                src, default_name = export_stl(project), "三维模型（STL）.stl"
+            elif fmt == "ply":
+                src, default_name = os.path.join(project, "odm_meshing", "odm_mesh.ply"), "网格模型（PLY）.ply"
+            elif fmt == "laz":
+                src = os.path.join(project, "odm_georeferencing", "odm_georeferenced_model.laz")
+                default_name = "点云（LAZ）.laz"
+            else:
+                self._send_json({"ok": False, "error": "不支持的导出格式"}, 400)
+                return
+            if not src or not os.path.isfile(src):
+                self._send_json(
+                    {"ok": False, "error": "该成果中没有可导出的文件（请确认已生成对应成果）"}, 404
+                )
+                return
+            target = save_file_dialog(default_name)
+            if not target:
+                self._send_json({"ok": True, "cancelled": True})
+                return
+            try:
+                shutil.copy2(src, target)
+                self._send_json({"ok": True, "saved": os.path.basename(target)})
+            except Exception as e:
+                self._send_json({"ok": False, "error": "保存失败：" + str(e)}, 500)
+        elif p == "/api/open-file":
+            name = q.get("name", [""])[0]
+            rel = q.get("file", [""])[0]
+            fp = self._safe_project_path(name, rel)
+            if fp and os.path.isfile(fp):
+                if os.name == "nt":
+                    os.startfile(fp)  # 默认程序打开；无默认程序时系统会弹出“选择应用”
+                    self._send_json({"ok": True})
+                else:
+                    self._send_json({"ok": False, "error": "当前环境不支持直接打开文件"}, 400)
+            else:
+                self._send_json({"ok": False, "error": "文件不存在"}, 404)
         elif p == "/api/results":
             items = []
             if os.path.isdir(PROJ_ROOT):
@@ -987,6 +1054,15 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 pass
             threading.Timer(0.6, os._exit, args=(0,)).start()
+        elif u.path == "/api/stop":
+            kill_odm()
+            with STATE["lock"]:
+                STATE["running"] = False
+                STATE["finished"] = True
+                STATE["success"] = False
+                STATE["end_time"] = time.time()
+                STATE["proc"] = None
+            self._send_json({"ok": True, "msg": "建模已终止"})
         else:
             self.send_error(404)
 

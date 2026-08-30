@@ -359,16 +359,26 @@ function helpHTML() {
         '<li><span class="hl">高度分层：</span>至少 2–3 个高度（高处全景 + 低处细节），立体感更强。</li>' +
         '<li><span class="hl">光线：</span>尽量在白天均匀光线下拍摄，避免强逆光与大面积阴影。</li>' +
         '<li><span class="hl">数量：</span>小型建筑建议 30–100 张；场地越大、越复杂，需要的照片越多。</li>' +
+        '<li><span class="hl">照片整理：</span>将无人机采集的所有照片集中存放在<b>同一个文件夹</b>中，再拖入软件。</li>' +
+        '<li><span class="hl">GPS 信息：</span>确保照片包含位置信息。检查方法：右键图片 → 属性 → 详细信息，需要能看到经纬度等位置信息。</li>' +
       '</ul></div>' +
     '</details>' +
     '<details class="help">' +
       '<summary>🖥️ 电脑硬件需求</summary>' +
+      '<div class="body">' +
+        '<p>操作系统：Windows 10/11 64位。</p>' +
+        '<p>CPU：多核心处理器，核心越多越快，建模阶段会充分使用多核。</p>' +
+        '<p>内存 (RAM)：建议 16GB，处理大面积区域建议 48GB 以上（照片越多越吃内存）。</p>' +
+        '<p>硬盘空间：预留充足的存储空间。原始影像、临时文件和最终成果会占用大量空间。建议准备影像大小的 10-20 倍的可用空间（例如，1GB 影像需要 10-20GB 空间）。</p>' +
+        '<p>显卡 (GPU)：拥有支持 CUDA 的 NVIDIA GPU 可以显著加速某些步骤（如深度图计算）。AMD/Intel 集成显卡或者无独显也可运行，但速度较慢。</p>' +
+      '</div>' +
+    '</details>' +
+    '<details class="help">' +
+      '<summary>📂 成果用什么软件打开</summary>' +
       '<div class="body"><ul>' +
-        '<li><span class="hl">系统：</span>Windows 10/11 64 位。</li>' +
-        '<li><span class="hl">内存：</span>建议 16GB 以上（照片越多越吃内存）。</li>' +
-        '<li><span class="hl">硬盘：</span>建议预留 20GB 以上空间，成果与临时文件体积较大。</li>' +
-        '<li><span class="hl">显卡：</span>有独立显卡可显著加速；无独显也能运行，只是更慢。</li>' +
-        '<li><span class="hl">CPU：</span>核心越多越快，建模阶段会充分使用多核。</li>' +
+        '<li><span class="hl">正射影像与 DEM：</span>QGIS</li>' +
+        '<li><span class="hl">点云分析：</span>CloudCompare、Autodesk ReCap Pro</li>' +
+        '<li><span class="hl">三维模型查看：</span>MeshLab、Rhino</li>' +
       '</ul></div>' +
     '</details>' +
     '<details class="help">' +
@@ -539,7 +549,7 @@ function logHTML() {
     '<div class="card" style="display:flex;gap:10px;justify-content:flex-end">' +
       '<button class="btn btn-ghost" onclick="showView(\'results\')">成果</button>' +
       '<button class="btn btn-ok" id="openFolderBtn" style="display:none" onclick="openCurrentFolder()">打开成果文件夹</button>' +
-      '<button class="btn btn-danger" onclick="quitApp()">结束程序</button>' +
+      '<button class="btn btn-danger" id="stopBtn" onclick="stopJob()">终止建模</button>' +
     '</div>' +
   '</div>';
 }
@@ -562,14 +572,14 @@ function startPoll() {
   fn();
   S.statusTimer = setInterval(fn, 2000);
 }
-async function quitApp() {
+async function stopJob() {
   const running = S.lastStatus && S.lastStatus.running;
-  const msg = running
-    ? "当前有建模任务正在运行，结束程序将终止该任务。确定结束吗？"
-    : "确定要结束鹭见 SiteSight 吗？";
-  if (!confirm(msg)) return;
-  try { await api("/api/shutdown", { method: "POST" }); } catch (e) {}
-  setTimeout(() => { try { window.close(); } catch (e) {} }, 400);
+  if (!running) { toast("当前没有正在运行的任务", "err"); return; }
+  if (!confirm("确定要终止当前建模任务吗？")) return;
+  try {
+    await api("/api/stop", { method: "POST" });
+    toast("建模已终止", "ok");
+  } catch (e) { toast(e.message, "err"); }
 }
 function renderStatus(s) {
   $("#logTitle").textContent = "任务进度" + (s.name ? " · " + s.name : "");
@@ -671,17 +681,17 @@ function renderDetail(name, files) {
     ? files.files.map(f =>
         '<div class="file-row"><span class="fn">📄 ' + esc(f.label) + '</span>' +
         '<span class="sz">' + f.size_mb + ' MB</span>' +
-        '<a class="btn btn-ghost btn-sm" href="/download?name=' + encodeURIComponent(name) + "&file=" + encodeURIComponent(f.file) + '">下载</a></div>'
+        '<button class="btn btn-ghost btn-sm" data-name="' + esc(name) + '" data-file="' + esc(f.file) + '" onclick="openFileBtn(this)">查看</button></div>'
       ).join("")
     : '<div class="empty-hint">该项目暂无已生成成果文件。</div>';
   d.innerHTML =
     '<h2>📦 ' + esc(name) + ' <span class="tag">成果明细</span></h2>' +
-    '<p class="desc">模型与报告文件均可下载；也可一键打包全部成果。</p>' +
+    '<p class="desc">点击「查看」用系统默认软件打开；导出文件会弹出保存对话框，保存到你想放的位置。</p>' +
     '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">' +
-      '<a class="btn btn-ok btn-sm" href="/api/zip?name=' + encodeURIComponent(name) + '">下载全部 (ZIP)</a>' +
-      '<a class="btn btn-ghost btn-sm" href="/api/export?name=' + encodeURIComponent(name) + '&format=stl">导出 STL</a>' +
-      '<a class="btn btn-ghost btn-sm" href="/api/export?name=' + encodeURIComponent(name) + '&format=ply">导出 PLY</a>' +
-      '<a class="btn btn-ghost btn-sm" href="/api/export?name=' + encodeURIComponent(name) + '&format=laz">导出 LAZ</a>' +
+      '<button class="btn btn-ok btn-sm" onclick="exportSave(\'' + esc(name) + '\',\'zip\')">打包 ZIP（另存为）</button>' +
+      '<button class="btn btn-ghost btn-sm" onclick="exportSave(\'' + esc(name) + '\',\'stl\')">导出 STL</button>' +
+      '<button class="btn btn-ghost btn-sm" onclick="exportSave(\'' + esc(name) + '\',\'ply\')">导出 PLY</button>' +
+      '<button class="btn btn-ghost btn-sm" onclick="exportSave(\'' + esc(name) + '\',\'laz\')">导出 LAZ</button>' +
     '</div>' +
     rows +
     '<div style="margin-top:18px;border-top:1px dashed var(--line);padding-top:16px">' +
@@ -695,6 +705,22 @@ function renderDetail(name, files) {
         '<button class="btn btn-ghost btn-sm" onclick="sendFeedback()">保存偏好</button></div>' +
       '</div>' +
     '</div>';
+}
+async function openFileBtn(btn) {
+  const name = btn.dataset.name, file = btn.dataset.file;
+  try {
+    await api("/api/open-file?name=" + encodeURIComponent(name) + "&file=" + encodeURIComponent(file));
+    toast("已用系统默认程序打开", "ok");
+  } catch (e) { toast(e.message, "err"); }
+}
+async function exportSave(name, format) {
+  const labels = { stl: "STL 模型", ply: "PLY 网格", laz: "LAZ 点云", zip: "ZIP 打包" };
+  try {
+    toast("正在准备" + labels[format] + "…");
+    const r = await api("/api/export-save?name=" + encodeURIComponent(name) + "&format=" + format);
+    if (r.cancelled) { toast("已取消", "ok"); return; }
+    toast("已保存：" + r.saved, "ok");
+  } catch (e) { toast(e.message, "err"); }
 }
 async function analyzeProject() {
   if (!S.loadedProject) return;
