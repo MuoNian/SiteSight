@@ -677,6 +677,12 @@ async function loadResult(name) {
 function renderDetail(name, files) {
   const d = $("#detailCard");
   d.style.display = "block";
+  const has = {};
+  (files.files || []).forEach(f => { has[f.label] = true; });
+  const canStl = has["三维模型（带纹理）OBJ"] || has["三维模型 2.5D OBJ"];
+  const canPly = has["网格 PLY"];
+  const canLaz = has["点云 LAZ"];
+  const dis = (ok, tip) => ok ? "" : " disabled title=\"" + tip + "\"";
   const rows = files.files && files.files.length
     ? files.files.map(f =>
         '<div class="file-row"><span class="fn">📄 ' + esc(f.label) + '</span>' +
@@ -689,9 +695,9 @@ function renderDetail(name, files) {
     '<p class="desc">点击「查看」用系统默认软件打开；导出文件会弹出保存对话框，保存到你想放的位置。</p>' +
     '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">' +
       '<button class="btn btn-ok btn-sm" onclick="exportSave(\'' + esc(name) + '\',\'zip\')">打包 ZIP（另存为）</button>' +
-      '<button class="btn btn-ghost btn-sm" onclick="exportSave(\'' + esc(name) + '\',\'stl\')">导出 STL</button>' +
-      '<button class="btn btn-ghost btn-sm" onclick="exportSave(\'' + esc(name) + '\',\'ply\')">导出 PLY</button>' +
-      '<button class="btn btn-ghost btn-sm" onclick="exportSave(\'' + esc(name) + '\',\'laz\')">导出 LAZ</button>' +
+      '<button class="btn btn-ghost btn-sm"' + dis(canStl, "该成果暂无三维模型（OBJ），无法导出 STL") + ' onclick="exportSave(\'' + esc(name) + '\',\'stl\')">导出 STL</button>' +
+      '<button class="btn btn-ghost btn-sm"' + dis(canPly, "该成果暂无网格模型（PLY）") + ' onclick="exportSave(\'' + esc(name) + '\',\'ply\')">导出 PLY</button>' +
+      '<button class="btn btn-ghost btn-sm"' + dis(canLaz, "该成果暂无点云（LAZ）") + ' onclick="exportSave(\'' + esc(name) + '\',\'laz\')">导出 LAZ</button>' +
     '</div>' +
     rows +
     '<div style="margin-top:18px;border-top:1px dashed var(--line);padding-top:16px">' +

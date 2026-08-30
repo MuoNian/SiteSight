@@ -20,7 +20,7 @@ from memory_agent import get_relevant_memories, memory_block
 ODM_DIR = (
     os.environ.get("SITESIGHT_ODMDIR")
     or os.environ.get("ODM_WEB_ODMDIR")
-    or r"D:\WebODM（OpenDroneMap）\ODM"
+    or os.path.join(os.path.dirname(os.path.abspath(__file__)), "ODM")
 )
 
 # 本地 API 配置文件（不入库），也可用环境变量直接指定

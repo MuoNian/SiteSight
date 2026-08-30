@@ -77,7 +77,8 @@ echo 处理日志会同时显示在窗口里并保存到 processing.log
 echo.
 
 REM ---------- 5. 启动 ODM ----------
-cd /d "D:\WebODM（OpenDroneMap）\ODM"
+if "%ODM_DIR%"=="" set "ODM_DIR=D:\ODM"
+cd /d "%ODM_DIR%"
 set "EXTRA="
 if "%ODM_FAST%"=="1" set "EXTRA=--fast"
 call winrun.bat --project-path "%PROJROOT%" "%NAME%" --dsm %EXTRA% --optimize-disk-space 2>&1 | powershell -NoProfile -Command "$input | Tee-Object -FilePath '%PROJ%\processing.log'"

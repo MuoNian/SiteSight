@@ -66,23 +66,23 @@ python -m PyInstaller --noconfirm --clean --onedir --noconsole --name SiteSight 
 
 Write-Host "==== 5/6 Assemble dist + copy ODM engine ===="
 $dist = "dist\SiteSight"
-# server.py / site_report.py 会在 _internal 目录里找 config.json（AI 报告密钥）
-if (Test-Path "app\config.json") {
-    Copy-Item "app\config.json" "$dist\_internal\config.json" -Force
-    Write-Host "已复制 app\config.json -> _internal\config.json"
-}
+# ODM 引擎源目录：优先使用环境变量 ODM_SOURCE_DIR，未设置时使用通用默认 D:\ODM
+$odmSource = $env:ODM_SOURCE_DIR
+if (-not $odmSource) { $odmSource = "D:\ODM" }
+# 说明：不再内置任何 API 密钥。AI 报告密钥由使用者在「设置 → 外部 API 接入」中自行填写，
+# 仅保存在本机用户目录（~\.sitesight\config.json），不入库、不随安装包分发。
 # 演示数据：server.py 按“_internal 的上级目录/data”查找
 if (-not (Test-Path "$dist\data")) {
     robocopy "data" "$dist\data" /E /NFL /NDL /NJH /NJS | Out-Null
 }
 if (-not (Test-Path "$dist\ODM")) {
     Write-Host "复制 ODM 引擎（4-6 GB，需要几分钟）..."
-    robocopy "D:\WebODM（OpenDroneMap）\ODM" "$dist\ODM" /E /R:1 /W:1 /MT:8 /NFL /NDL /NJH /NJS
+    robocopy "$odmSource" "$dist\ODM" /E /R:1 /W:1 /MT:8 /NFL /NDL /NJH /NJS
 }
 Copy-Item "LICENSE" "$dist\LICENSE.txt" -Force
 Copy-Item "README.md" "$dist\README.txt" -Force
-if (Test-Path "D:\WebODM（OpenDroneMap）\ODM\licenses") {
-    robocopy "D:\WebODM（OpenDroneMap）\ODM\licenses" "$dist\ODM_LICENSES" /E /NFL /NDL /NJH /NJS | Out-Null
+if (Test-Path "$odmSource\licenses") {
+    robocopy "$odmSource\licenses" "$dist\ODM_LICENSES" /E /NFL /NDL /NJH /NJS | Out-Null
 }
 
 Write-Host "==== 6/6 Compile installer ===="

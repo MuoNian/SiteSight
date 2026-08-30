@@ -54,7 +54,7 @@
 
 ### 2. 配置 ODM 路径
 
-默认指向 `D:\WebODM（OpenDroneMap）\ODM`。若不同，编辑 `app/server.py` 顶部，或设置环境变量：
+打包版会自动定位安装目录下的 `ODM` 引擎文件夹；开发环境请设置环境变量指向你的 ODM 目录：
 
 ```cmd
 set SITESIGHT_ODMDIR=C:\你的ODM目录
@@ -114,7 +114,6 @@ SiteSight/
 - 演示内容：内置真实航拍成果（60 张照片场地），一键“加载官方演示”→ 秒出 AI 报告 → 反馈偏好 → 重新生成
 - 部署步骤：见 [docs/CloudStudio部署指南.md](docs/CloudStudio部署指南.md)（约 10 分钟）
 - 说明：云端演示版不做实时建模（ODM 重计算留本机），完整建模仍用本地版
-- 当前演示链接（评审期间保持工作台运行）：https://fe395d4b2ddd4444b8564f0f989420bc--8765.ap-shanghai2.cloudstudio.club
 
 ## 八、参赛信息
 

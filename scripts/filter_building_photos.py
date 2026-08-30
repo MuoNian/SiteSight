@@ -21,7 +21,7 @@ import shutil
 import subprocess
 import sys
 
-EXIFTOOL = os.environ.get("SITESIGHT_EXIFTOOL", r"D:\WebODM（OpenDroneMap）\ODM\SuperBuild\install\bin\exiftool.exe")
+EXIFTOOL = os.environ.get("SITESIGHT_EXIFTOOL", "exiftool")
 
 
 def get_pitches(src_dir):

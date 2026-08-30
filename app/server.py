@@ -51,7 +51,7 @@ SETTINGS = _load_settings()
 ODM_DIR = (
     os.environ.get("SITESIGHT_ODMDIR")
     or os.environ.get("ODM_WEB_ODMDIR")
-    or r"D:\WebODM（OpenDroneMap）\ODM"
+    or os.path.join(os.path.dirname(BASE_DIR), "ODM")
 )
 
 def _writable_dir(cand):
@@ -264,7 +264,7 @@ def load_project_state(proj):
             end_time=None,
             proc=None,
         )
-    make_preview(proj)
+    finalize_project(proj)
     return os.path.basename(proj)
 
 
@@ -479,7 +479,7 @@ def watch_job(proc, log_path):
         STATE["end_time"] = time.time()
         STATE["proc"] = None
     if ok:
-        make_preview(STATE["project"])
+        finalize_project(STATE["project"])
 
 
 def make_preview(project):
@@ -511,6 +511,19 @@ def make_preview(project):
     except Exception:
         pass
     return out if os.path.exists(out) else None
+
+
+def finalize_project(project):
+    """成果本地整理：预览图、STL、成果打包，全部放进项目目录，供直接查看/导出。"""
+    make_preview(project)
+    try:
+        export_stl(project)
+    except Exception:
+        pass
+    try:
+        build_zip(project)
+    except Exception:
+        pass
 
 
 def build_zip(project):
