@@ -94,6 +94,8 @@
   .btn-ghost:hover{background:var(--surface-2);color:var(--ink)}
   .btn-ok{background:var(--ok);color:#fff}
   .btn-ok:hover{filter:brightness(.94)}
+  .btn-danger{background:var(--err);color:#fff}
+  .btn-danger:hover{filter:brightness(.94)}
   .btn-sm{padding:5px 12px;font-size:.8rem}
 
   .input{
@@ -244,7 +246,7 @@ const MENU = [
 ];
 const S = { view: "home", info: null, projectName: null, files: null, report: null,
             uploads: { name: null, done: 0, total: 0 }, statusTimer: null, quality: "standard",
-            loadedProject: null };
+            loadedProject: null, notifiedDone: false };
 
 async function api(path, opts) {
   const o = opts || {};
@@ -294,7 +296,7 @@ function showView(name) {
   if (name === "home") el.innerHTML = homeHTML();
   else if (name === "help") el.innerHTML = helpHTML();
   else if (name === "launch") { el.innerHTML = launchHTML(); bindLaunch(); }
-  else if (name === "log") { el.innerHTML = logHTML(); startPoll(); }
+  else if (name === "log") { el.innerHTML = logHTML(); S.notifiedDone = false; startPoll(); }
   else if (name === "results") { el.innerHTML = resultsHTML(); loadResults(); }
   else if (name === "settings") { el.innerHTML = settingsHTML(); loadSettings(); }
   if (name !== "log") stopPoll();
@@ -336,7 +338,7 @@ function homeHTML() {
       '<div class="f"><div class="n">🤖</div><h3>AI 场地报告</h3><p>自动解读坡度、高差、面积等关键指标，输出中文分析简报。</p></div>' +
       '<div class="f"><div class="n">🧠</div><h3>记忆型报告</h3><p>记住你的偏好（如“突出坡度”），后续报告自动贴合你的习惯。</p></div>' +
     '</div>' +
-    '<div class="card">' +
+    '<div class="card" style="margin-top:16px">' +
       '<h2>关于本项目</h2>' +
       '<p class="desc">鹭见 SiteSight 由大学生团队为黑客松打造，采用开源 OpenDroneMap 引擎，全程本地运行、数据不出电脑。</p>' +
       '<p class="desc">开源仓库：<a href="https://github.com/MuoNian/SiteSight" target="_blank" rel="noopener">github.com/MuoNian/SiteSight</a></p>' +
@@ -377,6 +379,31 @@ function helpHTML() {
         '<li><span class="hl">第三步：</span>在「日志」查看实时进度与剩余时间估算。</li>' +
         '<li><span class="hl">第四步：</span>完成后到「成果」打开文件夹、下载模型或生成 AI 分析报告。</li>' +
         '<li><span class="hl">提示：</span>在「设置」里可以修改成果保存位置与 API 接入。</li>' +
+      '</ul></div>' +
+    '</details>' +
+    '<details class="help">' +
+      '<summary>🤖 AI 场地报告与 API 配置</summary>' +
+      '<div class="body">' +
+        '<p><span class="hl">为什么要配置 API？</span>「AI 场地报告」由大模型根据建模成果生成自然语言分析。当前版本需要联网调用外部大模型 API 才能生成完整报告；<b>未配置时</b>软件会自动使用内置离线模板，基础指标（坡度、高差、面积等）仍然可用，只是没有 AI 生成的文字分析。</p>' +
+        '<ul>' +
+          '<li><span class="hl">需要什么：</span>一个 OpenAI 兼容的大模型 API（如 OpenAI、阿里云百炼、DeepSeek 等）及其 API Key。</li>' +
+          '<li><span class="hl">在哪里配置：</span>「设置」→「外部 API 接入」→ 填写名称、API 地址、模型名、API Key → 保存。</li>' +
+          '<li><span class="hl">在哪里使用：</span>「成果」→ 打开某个项目 → 点击「生成分析报告」。</li>' +
+          '<li><span class="hl">安全性：</span>Key 只保存在本机用户目录，不会上传到任何第三方；报告内容也只在本地生成。</li>' +
+        '</ul>' +
+        '<p>提示：本地运行的 AI 分析功能正在开发中，届时将不再依赖外部 API。</p>' +
+      '</div>' +
+    '</details>' +
+    '<details class="help">' +
+      '<summary>🔧 常见问题与解决方法</summary>' +
+      '<div class="body"><ul>' +
+        '<li><span class="hl">磁盘空间不足导致任务中断：</span>清理磁盘，或在「设置」里把成果目录/临时目录改到空间更大的盘，再重新开始。</li>' +
+        '<li><span class="hl">成果目录创建失败（权限问题）：</span>新版会自动回退到用户目录；也可在安装时选择非系统盘，或右键「以管理员身份运行」。</li>' +
+        '<li><span class="hl">照片之间重合度不够导致失败：</span>确保相邻照片重叠率 60% 以上，光线均匀，避免大面积阴影。</li>' +
+        '<li><span class="hl">内存不足：</span>关闭其他占用内存的程序，或在启动时选择「快速」精度。</li>' +
+        '<li><span class="hl">打开软件弹黑色命令行窗口：</span>新版已改为无控制台模式，不再弹出。</li>' +
+        '<li><span class="hl">桌面快捷方式图标仍是旧图标：</span>删除旧快捷方式后重新安装，或重启一次资源管理器刷新图标缓存。</li>' +
+        '<li><span class="hl">日志页误报“已完成”：</span>新版已修复，只有在任务真正结束时才会提示。</li>' +
       '</ul></div>' +
     '</details>' +
   '</div>';
@@ -512,6 +539,7 @@ function logHTML() {
     '<div class="card" style="display:flex;gap:10px;justify-content:flex-end">' +
       '<button class="btn btn-ghost" onclick="showView(\'results\')">成果</button>' +
       '<button class="btn btn-ok" id="openFolderBtn" style="display:none" onclick="openCurrentFolder()">打开成果文件夹</button>' +
+      '<button class="btn btn-danger" onclick="quitApp()">结束程序</button>' +
     '</div>' +
   '</div>';
 }
@@ -523,13 +551,21 @@ function startPoll() {
       const s = await api("/api/status");
       renderStatus(s);
       if (tick++ % 3 === 0 && S.view === "results") loadResults();
-      if (!s.running && s.finished && S.view === "log") {
+      if (s.running) S.notifiedDone = false;
+      if (S.lastStatus && S.lastStatus.running && !s.running && s.finished && S.view === "log" && !S.notifiedDone) {
+        S.notifiedDone = true;
         if (s.success) toast("建模完成！可到成果页查看", "ok");
+        else toast("任务未成功，请查看下方错误诊断", "err");
       }
     } catch (e) {}
   };
   fn();
   S.statusTimer = setInterval(fn, 2000);
+}
+async function quitApp() {
+  if (!confirm("确定要结束鹭见 SiteSight 吗？")) return;
+  try { await api("/api/shutdown", { method: "POST" }); } catch (e) {}
+  setTimeout(() => { try { window.close(); } catch (e) {} }, 400);
 }
 function renderStatus(s) {
   $("#logTitle").textContent = "任务进度" + (s.name ? " · " + s.name : "");

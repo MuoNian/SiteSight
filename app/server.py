@@ -924,6 +924,9 @@ class Handler(BaseHTTPRequestHandler):
                 providers=body.get("providers"),
             )
             self._send_json(r, 200 if r.get("ok") else 400)
+        elif u.path == "/api/shutdown":
+            self._send_json({"ok": True, "msg": "正在退出…"})
+            threading.Timer(0.6, os._exit, args=(0,)).start()
         else:
             self.send_error(404)
 
