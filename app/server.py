@@ -54,17 +54,52 @@ ODM_DIR = (
     or r"D:\WebODM（OpenDroneMap）\ODM"
 )
 
-def _default_proj_root():
-    """成果目录默认与程序安装目录保持一致；不可写时回退到数据盘。"""
-    base = os.path.dirname(BASE_DIR)
-    cand = os.path.join(base, "SiteSight_Results")
-    if os.path.isdir(base) and os.access(base, os.W_OK):
+def _writable_dir(cand):
+    """尝试创建目录并写入探测文件，确认真正可写后返回路径。"""
+    try:
+        os.makedirs(cand, exist_ok=True)
+        probe = os.path.join(cand, ".write_probe")
+        with open(probe, "w", encoding="utf-8") as f:
+            f.write("ok")
+        os.remove(probe)
         return cand
-    for drv in ("D:", "E:"):
-        root = drv + os.sep
-        if os.path.isdir(root) and os.access(root, os.W_OK):
-            return os.path.join(drv, "SiteSight_Results")
-    return os.path.join(os.path.expanduser("~"), "SiteSight_Results")
+    except Exception:
+        return None
+
+
+def _default_proj_root():
+    """成果目录：优先与程序安装目录一致；不可写时自动回退到用户目录/数据盘。"""
+    base = os.path.dirname(BASE_DIR)
+    local = os.path.join(
+        os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"),
+        "SiteSight", "SiteSight_Results",
+    )
+    candidates = [
+        os.path.join(base, "SiteSight_Results"),
+        local,
+        os.path.join("D:", os.sep, "SiteSight_Results"),
+        os.path.join("E:", os.sep, "SiteSight_Results"),
+        os.path.join(os.path.expanduser("~"), "SiteSight_Results"),
+    ]
+    for cand in candidates:
+        ok = _writable_dir(cand)
+        if ok:
+            return ok
+    return candidates[0]
+
+
+def _default_temp_dir():
+    """临时目录：优先与程序安装目录一致；不可写时回退到用户目录。"""
+    base = os.path.dirname(BASE_DIR)
+    local = os.path.join(
+        os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"),
+        "SiteSight", "tmp",
+    )
+    for cand in (os.path.join(base, "tmp"), local):
+        ok = _writable_dir(cand)
+        if ok:
+            return ok
+    return local
 
 
 # 成果目录：可用 SITESIGHT_PROJROOT / ODM_WEB_PROJROOT 覆盖
@@ -74,7 +109,7 @@ PROJ_ROOT = (
     or SETTINGS.get("results_dir")
     or _default_proj_root()
 )
-TEMP_DIR = SETTINGS.get("temp_dir") or os.path.join(os.path.dirname(BASE_DIR), "tmp")
+TEMP_DIR = SETTINGS.get("temp_dir") or _default_temp_dir()
 
 
 def apply_settings(results_dir=None, temp_dir=None, providers=None):

@@ -7,6 +7,7 @@ AppId={{8D5F2E7A-1C3B-4E2F-9A6D-B1C2D3E4F5A6}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher=MuoNian
+SetupIconFile=assets\sitesight.ico
 DefaultDirName={autopf}\SiteSight
 DefaultGroupName={#MyAppName}
 UninstallDisplayIcon={app}\{#MyAppExeName}

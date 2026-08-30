@@ -49,12 +49,17 @@ if (-not $iscc -or -not (Test-Path $iscc)) { throw "Inno Setup 安装后仍找�
 Write-Host "使用 Inno Setup: $iscc"
 
 Write-Host "==== 3/6 Generate app icon ===="
-python packaging\make_icon.py
+if (Test-Path "app\static\assets\logo\logo_transparent.png") {
+    python packaging\make_logo_icon.py
+} else {
+    python packaging\make_icon.py
+}
 
 Write-Host "==== 4/6 PyInstaller build ===="
-python -m PyInstaller --noconfirm --clean --onedir --name SiteSight `
+python -m PyInstaller --noconfirm --clean --onedir --noconsole --name SiteSight `
     --add-data "app\static;static" `
     --add-data "app\config.example.json;." `
+    --add-data "packaging\assets\sitesight.ico;." `
     --hidden-import "webview.platforms.edgechromium" `
     --icon "packaging\assets\sitesight.ico" `
     app\launcher.py

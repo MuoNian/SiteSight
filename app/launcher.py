@@ -41,17 +41,33 @@ def wait_server(timeout=60):
 
 
 def main():
-    threading.Thread(target=server.main, daemon=True, name="sitesight-server").start()
-    if not wait_server():
-        print("警告：本地服务启动超时，请检查端口 %d 是否被占用" % PORT)
-    webview.create_window(
-        "鹭见 SiteSight",
-        "http://127.0.0.1:%d" % PORT,
-        width=1280,
-        height=860,
-        min_size=(960, 640),
-    )
-    webview.start()
+    try:
+        threading.Thread(target=server.main, daemon=True, name="sitesight-server").start()
+        if not wait_server():
+            print("警告：本地服务启动超时，请检查端口 %d 是否被占用" % PORT)
+        webview.create_window(
+            "鹭见 SiteSight",
+            "http://127.0.0.1:%d" % PORT,
+            width=1280,
+            height=860,
+            min_size=(960, 640),
+        )
+        webview.start()
+    except Exception:
+        # 无控制台模式下把错误写入日志，便于排查
+        import traceback
+
+        try:
+            log_dir = os.path.join(
+                os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"),
+                "SiteSight",
+            )
+            os.makedirs(log_dir, exist_ok=True)
+            with open(os.path.join(log_dir, "error.log"), "w", encoding="utf-8") as f:
+                traceback.print_exc(file=f)
+        except Exception:
+            pass
+        raise
 
 
 if __name__ == "__main__":
