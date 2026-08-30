@@ -28,6 +28,26 @@ import webview  # noqa: E402
 import server  # noqa: E402
 
 PORT = int(os.environ.get("SITESIGHT_PORT", "8765"))
+LOCK_FILE = os.path.join(
+    os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"),
+    "SiteSight", "app.lock",
+)
+
+
+def _pid_alive(pid):
+    try:
+        import ctypes
+
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        h = ctypes.windll.kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, int(pid))
+        if not h:
+            return False
+        code = ctypes.c_ulong()
+        ctypes.windll.kernel32.GetExitCodeProcess(h, ctypes.byref(code))
+        ctypes.windll.kernel32.CloseHandle(h)
+        return code.value == 259  # STILL_ACTIVE
+    except Exception:
+        return True
 
 
 def wait_server(timeout=60):
@@ -40,7 +60,46 @@ def wait_server(timeout=60):
     return False
 
 
+def _acquire_lock():
+    """单实例锁：已有实例在运行则提示并退出，返回 False。"""
+    os.makedirs(os.path.dirname(LOCK_FILE), exist_ok=True)
+    old_pid = None
+    if os.path.isfile(LOCK_FILE):
+        try:
+            with open(LOCK_FILE, "r", encoding="utf-8") as f:
+                old_pid = int((f.read() or "0").strip())
+        except Exception:
+            old_pid = None
+    if old_pid and _pid_alive(old_pid):
+        try:
+            import ctypes
+
+            ctypes.windll.user32.MessageBoxW(
+                0,
+                "鹭见 SiteSight 已在运行，请先关闭正在运行的程序。",
+                "鹭见 SiteSight",
+                0x10,
+            )
+        except Exception:
+            pass
+        return False
+    with open(LOCK_FILE, "w", encoding="utf-8") as f:
+        f.write(str(os.getpid()))
+    return True
+
+
+def _release_lock():
+    try:
+        with open(LOCK_FILE, "r", encoding="utf-8") as f:
+            if f.read().strip() == str(os.getpid()):
+                os.remove(LOCK_FILE)
+    except Exception:
+        pass
+
+
 def main():
+    if not _acquire_lock():
+        sys.exit(0)
     try:
         threading.Thread(target=server.main, daemon=True, name="sitesight-server").start()
         if not wait_server():
@@ -68,6 +127,8 @@ def main():
         except Exception:
             pass
         raise
+    finally:
+        _release_lock()
 
 
 if __name__ == "__main__":

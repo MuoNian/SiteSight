@@ -20,7 +20,7 @@ import urllib.request
 import webbrowser
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import memory_agent
 from site_report import generate_report
@@ -198,6 +198,8 @@ STATE = {
     "project": None,
     "log_path": None,
     "start_time": None,
+    "end_time": None,
+    "proc": None,
 }
 
 OUTPUT_CANDIDATES = [
@@ -210,8 +212,23 @@ OUTPUT_CANDIDATES = [
     ("odm_report/report.pdf", "处理报告 PDF"),
 ]
 
+# 下载文件的中文命名（按成果实际含义）
+DOWNLOAD_NAME_MAP = {
+    "odm_textured_model_geo.obj": "三维模型（带纹理）.obj",
+    "odm_textured_model_geo.stl": "三维模型（STL）.stl",
+    "odm_orthophoto.tif": "正射影像.tif",
+    "dsm.tif": "数字表面模型（DSM）.tif",
+    "odm_georeferenced_model.laz": "点云（LAZ）.laz",
+    "odm_mesh.ply": "网格模型（PLY）.ply",
+    "report.pdf": "处理报告.pdf",
+}
+
 # 官方演示成果（随仓库分发，云端可用）
 DEMO_PROJ = os.path.normpath(os.path.join(BASE_DIR, "..", "data", "demo_project"))
+
+
+def chinese_name(fp):
+    return DOWNLOAD_NAME_MAP.get(os.path.basename(fp), os.path.basename(fp))
 
 
 def odm_available():
@@ -223,6 +240,8 @@ def odm_available():
 
 def resolve_project(name):
     """优先返回当前已加载/处理中的项目路径，否则在 PROJ_ROOT 下查找。"""
+    if name == "demo_project" and os.path.isdir(DEMO_PROJ):
+        return DEMO_PROJ
     if STATE.get("project") and os.path.basename(STATE["project"]) == name:
         if os.path.isdir(STATE["project"]):
             return STATE["project"]
@@ -242,6 +261,8 @@ def load_project_state(proj):
             project=proj,
             log_path=log_path if os.path.isfile(log_path) else None,
             start_time=None,
+            end_time=None,
+            proc=None,
         )
     make_preview(proj)
     return os.path.basename(proj)
@@ -321,8 +342,10 @@ def status_dict():
     lines = read_log_tail(400)
     stage, pct = parse_stage(lines)
     elapsed = 0
-    if STATE.get("start_time"):
-        elapsed = int(time.time() - STATE["start_time"])
+    start = STATE.get("start_time")
+    end = STATE.get("end_time")
+    if start:
+        elapsed = int((end or time.time()) - start)
     d = {
         "running": STATE["running"],
         "finished": STATE["finished"],
@@ -434,6 +457,8 @@ def launch_job(name, make_dsm, make_fast=False, quality="standard"):
             project=project,
             log_path=log_path,
             start_time=time.time(),
+            end_time=None,
+            proc=proc,
         )
     threading.Thread(target=watch_job, args=(proc, log_path), daemon=True).start()
 
@@ -451,6 +476,8 @@ def watch_job(proc, log_path):
         STATE["running"] = False
         STATE["finished"] = True
         STATE["success"] = ok
+        STATE["end_time"] = time.time()
+        STATE["proc"] = None
     if ok:
         make_preview(STATE["project"])
 
@@ -508,6 +535,24 @@ def build_zip(project):
                         fp = os.path.join(root, fn)
                         z.write(fp, os.path.relpath(fp, project))
     return zpath
+
+
+def kill_odm():
+    """结束当前正在运行的 ODM 建模进程树。"""
+    with STATE["lock"]:
+        proc = STATE.get("proc")
+    if proc and proc.poll() is None:
+        try:
+            subprocess.run(
+                ["taskkill", "/PID", str(proc.pid), "/T", "/F"],
+                capture_output=True,
+                timeout=10,
+            )
+        except Exception:
+            try:
+                proc.terminate()
+            except Exception:
+                pass
 
 
 def export_stl(project):
@@ -590,9 +635,15 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(size))
         if download_name:
+            try:
+                ascii_name = download_name.encode("ascii").decode("ascii")
+            except UnicodeEncodeError:
+                ascii_name = "SiteSight_file"
             self.send_header(
                 "Content-Disposition",
-                'attachment; filename="{}"'.format(download_name),
+                'attachment; filename="{}"; filename*=UTF-8\'\'{}'.format(
+                    ascii_name, quote(download_name)
+                ),
             )
         self.end_headers()
         with open(path, "rb") as f:
@@ -677,7 +728,7 @@ class Handler(BaseHTTPRequestHandler):
             rel = q.get("file", [""])[0]
             fp = self._safe_project_path(name, rel)
             if fp and os.path.isfile(fp):
-                self._serve_file(fp, os.path.basename(fp))
+                self._serve_file(fp, chinese_name(fp))
             else:
                 self.send_error(404)
         elif p == "/preview":
@@ -694,8 +745,7 @@ class Handler(BaseHTTPRequestHandler):
             if not project:
                 self.send_error(404)
                 return
-            # 下载文件名必须用英文（HTTP 头不支持中文）
-            self._serve_file(build_zip(project), "SiteSight_Results.zip")
+            self._serve_file(build_zip(project), "全部成果.zip")
         elif p == "/api/open-folder":
             name = q.get("name", [""])[0]
             project = resolve_project(name)
@@ -745,7 +795,7 @@ class Handler(BaseHTTPRequestHandler):
             elif fmt == "laz":
                 fp = os.path.join(project, "odm_georeferencing", "odm_georeferenced_model.laz")
             if fp and os.path.isfile(fp):
-                self._serve_file(fp, os.path.basename(fp))
+                self._serve_file(fp, chinese_name(fp))
             else:
                 self.send_error(404)
         elif p == "/api/results":
@@ -926,6 +976,16 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(r, 200 if r.get("ok") else 400)
         elif u.path == "/api/shutdown":
             self._send_json({"ok": True, "msg": "正在退出…"})
+            kill_odm()
+            lock = os.path.join(
+                os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"),
+                "SiteSight", "app.lock",
+            )
+            try:
+                if os.path.isfile(lock):
+                    os.remove(lock)
+            except Exception:
+                pass
             threading.Timer(0.6, os._exit, args=(0,)).start()
         else:
             self.send_error(404)

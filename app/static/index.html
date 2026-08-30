@@ -563,7 +563,11 @@ function startPoll() {
   S.statusTimer = setInterval(fn, 2000);
 }
 async function quitApp() {
-  if (!confirm("确定要结束鹭见 SiteSight 吗？")) return;
+  const running = S.lastStatus && S.lastStatus.running;
+  const msg = running
+    ? "当前有建模任务正在运行，结束程序将终止该任务。确定结束吗？"
+    : "确定要结束鹭见 SiteSight 吗？";
+  if (!confirm(msg)) return;
   try { await api("/api/shutdown", { method: "POST" }); } catch (e) {}
   setTimeout(() => { try { window.close(); } catch (e) {} }, 400);
 }
@@ -618,8 +622,7 @@ async function loadResults() {
     const others = r.results.filter(x => x.name !== "demo_project");
     const items = demo.concat(others);
     if (!items.length) {
-      el.innerHTML = '<div class="empty-hint">还没有成果。完成一次建模后，成果会出现在这里。<br><br>' +
-                     '<button class="btn btn-primary" onclick="showView(\'launch\')">去启动建模</button></div>';
+      el.innerHTML = '<div class="empty-hint" style="font-size:.86rem">暂无成果</div>';
       return;
     }
     el.innerHTML = items.map(rc =>
