@@ -127,6 +127,15 @@
   .feat .f h3{font-size:.95rem;margin:8px 0 4px}
   .feat .f p{font-size:.82rem;color:var(--ink-3)}
 
+  /* 对比表与优势列表 */
+  .cmp{width:100%;border-collapse:collapse;font-size:.86rem;margin-top:6px}
+  .cmp th,.cmp td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+  .cmp th{background:var(--surface-2);font-weight:700;white-space:nowrap}
+  .cmp td:first-child{font-weight:600;white-space:nowrap}
+  .adv{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;padding:0;margin-top:8px}
+  .adv li{font-size:.86rem;color:var(--ink-2);padding-left:20px;position:relative}
+  .adv li::before{content:"✓";position:absolute;left:0;color:var(--accent);font-weight:700}
+
   /* 演示动图 */
   .demo{position:relative;overflow:hidden;border-radius:var(--r);border:1px solid var(--line);height:300px;background:#eae6dc}
   .demo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:kenburns 16s ease-in-out infinite alternate}
@@ -337,6 +346,43 @@ function homeHTML() {
       '<div class="f"><div class="n">🧊</div><h3>一键三维建模</h3><p>拖入照片文件夹，自动完成空三、稠密点云、网格与纹理贴图。</p></div>' +
       '<div class="f"><div class="n">🤖</div><h3>AI 场地报告</h3><p>自动解读坡度、高差、面积等关键指标，输出中文分析简报。</p></div>' +
       '<div class="f"><div class="n">🧠</div><h3>记忆型报告</h3><p>记住你的偏好（如“突出坡度”），后续报告自动贴合你的习惯。</p></div>' +
+    '</div>' +
+    '<div class="card" style="margin-top:16px">' +
+      '<h2>💡 项目优势 <span class="tag">成本对比</span></h2>' +
+      '<p class="desc">同样的场地三维建模任务，传统专业测绘方案动辄数万元投入；本方案用千元入门无人机 + 免费开源软件即可完成。</p>' +
+      '<table class="cmp">' +
+        '<tr><th>对比项</th><th>传统专业测绘方案</th><th>鹭见 SiteSight 方案</th></tr>' +
+        '<tr><td>无人机硬件</td><td>DJI Mavic 4 Pro（御 4 Pro）三摄旗舰航拍机<br>约 16,000 元</td><td>DJI NEO 系列入门机<br>约 1,000 元</td></tr>' +
+        '<tr><td>测绘软件</td><td>大疆智图等专业测绘软件<br>买断授权通常数万元</td><td>本软件完全免费、开源<br>0 元</td></tr>' +
+        '<tr><td>合计投入</td><td>约 2 万元以上</td><td>约 1,000 元起</td></tr>' +
+        '<tr><td>操作门槛</td><td>需测绘专业知识与软件培训</td><td>拖入照片、一键建模</td></tr>' +
+      '</table>' +
+      '<h3 style="margin:16px 0 6px">其他优势</h3>' +
+      '<ul class="adv">' +
+        '<li>本地运行，数据不出电脑，隐私安全</li>' +
+        '<li>AI 场地分析报告 + 记忆偏好，越用越懂你</li>' +
+        '<li>开源可审计、可二次开发，无厂商锁定</li>' +
+        '<li>多格式成果导出：OBJ / STL / PLY / LAZ / 正射 / DSM / PDF</li>' +
+        '<li>安装包自包含建模引擎，免配置开箱即用</li>' +
+        '<li>兼容含 GPS 信息的无人机 JPG 照片</li>' +
+      '</ul>' +
+    '</div>' +
+    '<div class="card" style="margin-top:16px">' +
+      '<h2>🛠 使用的开源资料</h2>' +
+      '<p class="desc">本项目基于以下开源组件构建，全程本地运行，无任何商业授权费用。</p>' +
+      '<table class="cmp">' +
+        '<tr><th>组件</th><th>用途</th><th>许可证</th></tr>' +
+        '<tr><td>OpenDroneMap</td><td>三维重建引擎（空三 / 点云 / 网格 / 正射 / DSM）</td><td>AGPL-3.0</td></tr>' +
+        '<tr><td>OpenSfM / OpenMVS / PDAL / GDAL / Entwine / PCL / OpenCV</td><td>ODM 内置的影像与点云处理组件</td><td>各开源许可</td></tr>' +
+        '<tr><td>exiftool</td><td>照片 GPS / 姿态元数据读取（可选）</td><td>GPL / Artistic</td></tr>' +
+        '<tr><td>Python 3.13</td><td>服务端与工具链运行环境</td><td>PSF License</td></tr>' +
+        '<tr><td>pywebview</td><td>桌面原生窗口外壳</td><td>BSD-3-Clause</td></tr>' +
+        '<tr><td>PyInstaller</td><td>程序打包</td><td>GPL-2.0+</td></tr>' +
+        '<tr><td>Pillow</td><td>图像与图标处理</td><td>HPND</td></tr>' +
+        '<tr><td>WebView2</td><td>界面渲染运行时（随系统）</td><td>微软免费运行时</td></tr>' +
+        '<tr><td>Inno Setup</td><td>安装程序制作</td><td>免费软件</td></tr>' +
+      '</table>' +
+      '<p class="form-hint" style="margin-top:10px">前端界面为原生 HTML/CSS/JS 实现，无第三方前端库；完整许可声明见仓库 LICENSE 与 ODM_LICENSES 目录。</p>' +
     '</div>' +
     '<div class="card" style="margin-top:16px">' +
       '<h2>关于本项目</h2>' +
