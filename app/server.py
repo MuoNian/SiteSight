@@ -903,25 +903,6 @@ class Handler(BaseHTTPRequestHandler):
                         }
                     )
             items.sort(key=lambda d: d["mtime"], reverse=True)
-            if os.path.isdir(DEMO_PROJ):
-                size = 0
-                for root, _, files in os.walk(DEMO_PROJ):
-                    for fn in files:
-                        try:
-                            size += os.path.getsize(os.path.join(root, fn))
-                        except OSError:
-                            pass
-                items.append(
-                    {
-                        "name": "demo_project",
-                        "mtime": os.path.getmtime(DEMO_PROJ),
-                        "size_mb": round(size / 1048576, 1),
-                        "has_model": os.path.isdir(os.path.join(DEMO_PROJ, "odm_texturing")),
-                        "has_preview": os.path.isfile(os.path.join(DEMO_PROJ, "preview_ortho.png")),
-                        "running": False,
-                        "demo": True,
-                    }
-                )
             self._send_json({"ok": True, "results": items, "root": PROJ_ROOT})
         elif p == "/api/settings":
             cfg_path = os.path.join(CONFIG_DIR, "config.json")
