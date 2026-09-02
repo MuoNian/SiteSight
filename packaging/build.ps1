@@ -79,6 +79,8 @@ if (-not (Test-Path "$dist\ODM")) {
     Write-Host "复制 ODM 引擎（4-6 GB，需要几分钟）..."
     robocopy "$odmSource" "$dist\ODM" /E /R:1 /W:1 /MT:8 /NFL /NDL /NJH /NJS
 }
+# 修复 ODM venv 中 cv2 的绝对路径配置（避免重定位后建模报 cv2 recursion 错误）
+python packaging\fix_odm_cv2.py "$dist\ODM"
 Copy-Item "LICENSE" "$dist\LICENSE.txt" -Force
 Copy-Item "README.md" "$dist\README.txt" -Force
 if (Test-Path "$odmSource\licenses") {
