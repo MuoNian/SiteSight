@@ -399,7 +399,46 @@ def find_jpg_dir(path):
             jpgs = [f for f in os.listdir(cand) if f.lower().endswith((".jpg", ".jpeg"))]
             if jpgs:
                 return cand
+    # 顶层没有 JPG 时，自动查找直接子目录中的照片文件夹（兼容照片散落在子目录的情况）
+    try:
+        for sub in sorted(os.listdir(path)):
+            cand = os.path.join(path, sub)
+            if os.path.isdir(cand):
+                jpgs = [f for f in os.listdir(cand) if f.lower().endswith((".jpg", ".jpeg"))]
+                if jpgs:
+                    return cand
+    except Exception:
+        pass
     return None
+
+
+def pick_folder_dialog():
+    """弹出 Windows 系统原生『选择文件夹』对话框，返回路径；取消返回 None。
+
+    用独立 PowerShell 进程（STA 模式）弹 WinForms 对话框，避免在 HTTP
+    工作线程中直接调用 Win32 对话框导致弹不出来。
+    """
+    try:
+        script = (
+            "Add-Type -AssemblyName System.Windows.Forms;"
+            "$d = New-Object System.Windows.Forms.FolderBrowserDialog;"
+            "$d.Description = '请选择照片文件夹（包含 JPG 照片）';"
+            "$d.ShowNewFolderButton = $false;"
+            "if ($d.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {"
+            "Write-Output $d.SelectedPath"
+            "}"
+        )
+        r = subprocess.run(
+            ["powershell", "-NoProfile", "-STA", "-Command", script],
+            capture_output=True,
+            text=True,
+            timeout=300,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+        out = (r.stdout or "").strip()
+        return out if out and os.path.isdir(out) else None
+    except Exception:
+        return None
 
 
 def copy_jpgs(src_dir, dest_dir):
@@ -950,6 +989,12 @@ class Handler(BaseHTTPRequestHandler):
             name = "project_" + time.strftime("%Y%m%d_%H%M%S")
             os.makedirs(os.path.join(PROJ_ROOT, name, "images"), exist_ok=True)
             self._send_json({"ok": True, "name": name})
+        elif u.path == "/api/pick-folder":
+            path = pick_folder_dialog()
+            if path:
+                self._send_json({"ok": True, "path": path})
+            else:
+                self._send_json({"ok": False, "cancelled": True})
         elif u.path == "/api/start":
             with STATE["lock"]:
                 if STATE["running"]:
@@ -967,7 +1012,8 @@ class Handler(BaseHTTPRequestHandler):
                 return
             body = self._read_body()
             name = body.get("name") or "project_" + time.strftime("%Y%m%d_%H%M%S")
-            photo_path = body.get("path")
+            # 清洗路径：去掉首尾空格与可能误带的引号
+            photo_path = str(body.get("path") or "").strip().strip('"').strip("'")
             make_dsm = bool(body.get("make_dsm", True))
             make_fast = bool(body.get("make_fast", False))
             quality = body.get("quality", "standard")

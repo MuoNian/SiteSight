@@ -512,13 +512,12 @@ function launchHTML() {
 }
 function bindLaunch() {
   const dz = $("#dropzone"), pick = $("#folderPick");
-  dz.onclick = () => pick.click();
+  dz.onclick = () => pickFolder();
   dz.ondragover = e => { e.preventDefault(); dz.classList.add("drag"); };
   dz.ondragleave = () => dz.classList.remove("drag");
   dz.ondrop = e => {
     e.preventDefault(); dz.classList.remove("drag");
-    const files = e.dataTransfer.files;
-    if (files && files.length) uploadFiles(files);
+    handleDrop(e.dataTransfer);
   };
   pick.onchange = () => { if (pick.files.length) uploadFiles(pick.files); };
   $("#segQuality").querySelectorAll("button").forEach(b => b.onclick = () => {
@@ -532,13 +531,64 @@ function bindLaunch() {
     }[S.quality];
   });
 }
+async function handleDrop(dt) {
+  // 优先用 entry 方式读取（支持拖入整个文件夹），失败再退回 files 列表
+  try {
+    const items = dt && dt.items;
+    if (items && items.length) {
+      const entries = [];
+      for (const it of items) {
+        const entry = it.webkitGetAsEntry && it.webkitGetAsEntry();
+        if (entry) entries.push(entry);
+      }
+      if (entries.length) {
+        const files = [];
+        const walk = async (entry) => {
+          if (entry.isFile) {
+            const f = await new Promise((res, rej) => entry.file(res, rej));
+            if (/\.jpe?g$/i.test(f.name)) files.push(f);
+          } else if (entry.isDirectory) {
+            const reader = entry.createReader();
+            let batch;
+            do {
+              batch = await new Promise((res, rej) => reader.readEntries(res, rej));
+              for (const en of batch) await walk(en);
+            } while (batch.length > 0);
+          }
+        };
+        for (const en of entries) await walk(en);
+        if (files.length) { uploadFiles(files); return; }
+      }
+    }
+    const files = dt && dt.files;
+    if (files && files.length) { uploadFiles(files); return; }
+  } catch (e) {}
+  // 拖拽读取失败时自动打开系统文件夹选择框兜底
+  toast("未能直接读取拖入的内容，已自动打开系统选择框…");
+  pickFolder();
+}
+async function pickFolder() {
+  try {
+    const r = await api("/api/pick-folder", { method: "POST" });
+    if (r.cancelled) return;
+    if (!r.path) { toast("未选择文件夹", "err"); return; }
+    S.projectName = null;
+    S.uploads = { name: null, done: 0, total: 0 };
+    $("#pathInput").value = r.path;
+    $("#pickedInfo").innerHTML = '<p class="form-hint" style="color:var(--ok)">✓ 已选择照片文件夹：' + esc(r.path) + '</p>';
+    setReady("已指定照片文件夹", true);
+  } catch (e) { toast(e.message, "err"); }
+}
 function setReady(text, enable) {
   $("#readyInfo").textContent = text;
   $("#startBtn").disabled = !enable;
 }
 async function uploadFiles(fileList) {
   const files = Array.from(fileList).filter(f => /\.jpe?g$/i.test(f.name));
-  if (files.length < 2) { toast("至少需要 2 张 JPG 照片", "err"); return; }
+  if (files.length < 2) {
+    toast("未找到 JPG 照片：请确认文件夹内包含 .jpg / .jpeg 文件（至少 2 张）。也可以点击下方按钮用系统对话框选择文件夹。", "err");
+    return;
+  }
   try {
     const r = await api("/api/new-project", { method: "POST" });
     S.uploads = { name: r.name, done: 0, total: files.length };
