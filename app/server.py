@@ -29,7 +29,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 APP_NAME = "鹭见 SiteSight"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.0.1"
 APP_ITERATION = "正式版"
 
 # 用户设置存放目录（可写，不会随安装目录变动）

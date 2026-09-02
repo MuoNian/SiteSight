@@ -1,5 +1,5 @@
 #define MyAppName "鹭见 SiteSight"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.1"
 #define MyAppExeName "SiteSight.exe"
 
 [Setup]
